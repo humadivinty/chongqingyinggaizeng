@@ -1,0 +1,16 @@
+LIBRARY PLATERECOGNIZE
+EXPORTS
+
+Plate_InitDevice
+Plate_CloseDevice
+Plate_GetInfo
+Plate_GetImage
+Plate_GetState
+Plate_Capture
+Plate_InitVideo
+Plate_CloseVideo
+Plate_Screenshot
+Plate_Timing
+Plate_ShowTime
+Plate_CloseTime
+Plate_GetDeviceInfo
