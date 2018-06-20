@@ -423,7 +423,7 @@ LRESULT Ctest_PLATERECOGNIZEDlg::OnUserResult(WPARAM wParam, LPARAM lParam)
     {
         return 0;
     }
-    char chLog[256] = { 0 };
+    char chLog[512] = { 0 };
     char szPlateNo[64] = { 0 }, szPicId[128] = { 0 };
     sprintf_s(szPicId, sizeof(szPicId), "%lu",GetTickCount());
     int iColorInfo = -1;

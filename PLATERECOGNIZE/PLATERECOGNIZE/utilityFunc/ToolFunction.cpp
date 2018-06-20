@@ -461,6 +461,61 @@ bool Tool_Img_ScaleJpg(PBYTE pbSrc, int iSrcLen, PBYTE pbDst, DWORD *iDstLen, in
     return bRet;
 }
 
+bool Tool_Img_compress(PBYTE pbSrc, int iSrcLen, PBYTE pbDst, DWORD *iDstLen, int iDstWidth, int iDstHeight, int wishSize)
+{
+    if (pbSrc == NULL || pbDst == NULL
+        || iSrcLen <= 0 || *iDstLen <= 0
+        || *iDstLen < wishSize)
+    {
+        printf("Tool_Img_compress, pbSrc == NULL || pbDst == NULL || iSrcLen <= 0 || *iDstLen <= 0, the parameter is invalid.\n");
+        return false;
+    }
+    if (iSrcLen <= wishSize)
+    {
+        printf("Tool_Img_compress, the size is already meet the requirements, copy to buffer directly.\n");
+        memcpy(pbDst, pbSrc, iSrcLen);
+        *iDstLen = iSrcLen;
+        return true;
+    }
+    const int iMaxImgSize = 20 * 1024 * 1024;
+    PBYTE pBuffer = new BYTE[iMaxImgSize];
+    if (!pBuffer)
+    {
+        printf("Tool_Img_compress, the buffer is allocate failed.\n");
+        return false;
+    }
+
+    DWORD iBufSize = iMaxImgSize;
+    int iCompressQuality = 65;
+    memset(pBuffer, 0, iMaxImgSize);
+    while (iCompressQuality > 0 && iBufSize >= wishSize)
+    {
+        iBufSize = iMaxImgSize;
+        memset(pBuffer, 0, iMaxImgSize);
+        Tool_Img_ScaleJpg(pbSrc, iSrcLen, pBuffer, &iBufSize, iDstWidth, iDstHeight, iCompressQuality);
+        iCompressQuality -= 15;
+    }
+    bool bRet = false;
+    if (iBufSize > wishSize)
+    {
+        printf("after compress , the size is still larger than wish size.\n");
+        *iDstLen = iBufSize;
+    }
+    else
+    {
+        printf("after compress , the final size = %lu.\n", iBufSize);
+        memcpy(pbDst, pBuffer, iBufSize);
+        *iDstLen = iBufSize;
+        bRet = true;
+    }
+    if (pBuffer)
+    {
+        delete[] pBuffer;
+        pBuffer = NULL;
+    }
+    return bRet;
+}
+
 int Tool_GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 {
     UINT  num = 0;          // number of image encoders
@@ -886,8 +941,10 @@ std::string GetSoftVersion(const char* exepath)
 
 #endif
 
-int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInfo, UCHAR* destImgBuffer, long& destBufferSize)
+int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInfo, void* destImgBuffer, size_t& destBufferSize)
 {
+#define POS_UP_TO_IMG (-1)
+#define POS_DOWN_TO_IMG (-2)
     if (!dataStruct.srcImgData || dataStruct.srcImgDataLengh <= 0 || !destImgBuffer || destBufferSize <= 0)
     {
         printf("myDrawString, the parameter is invalid, return 1.\n ");
@@ -956,10 +1013,13 @@ int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInf
 
     // 从流创建位图
     Bitmap bmpSrc(pStreamSrc);
-    int iWidth = bmpSrc.GetWidth();
-    int iHeight = bmpSrc.GetHeight();
+    //CLSID clsidEncoder;
+    //Tool_GetEncoderClsid(L"image/bmp", &clsidEncoder);
+    //bmpSrc.Save(L"./3.bmp", &clsidEncoder);
+    int iSrcWidth = bmpSrc.GetWidth();
+    int iSrcHeight = bmpSrc.GetHeight();
 
-    Gdiplus::Color fontColor(overlayInfo.iColorR, overlayInfo.iColorG, overlayInfo.iColorB);
+    Gdiplus::Color fontColor(overlayInfo.st_fontColor.iColorAlpha, overlayInfo.st_fontColor.iColorR, overlayInfo.st_fontColor.iColorG, overlayInfo.st_fontColor.iColorB);
     Gdiplus::SolidBrush  fontBrush(fontColor);
     Gdiplus::FontFamily  fontFamily(L"Times New Roman");
     Gdiplus::Font        font(&fontFamily, overlayInfo.iFontSize, FontStyleRegular, UnitPixel);
@@ -967,28 +1027,39 @@ int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInf
     Gdiplus::RectF  rectfOut;
     {
         //计算消息主题的高度
-        Gdiplus::Bitmap bgtest(iWidth, iHeight);
+        Gdiplus::Bitmap bgtest(iSrcWidth, iSrcHeight);
         Gdiplus::Graphics    graphicsTest(&bgtest);
         Gdiplus::RectF rtGdiplus;//计算消息主题的宽度
-        rtGdiplus.X = rtGdiplus.Y = 0.0;
-        rtGdiplus.Width = (float)iWidth;
+        rtGdiplus.X = (overlayInfo.st_FontPosition.iPosX > 0) ? overlayInfo.st_FontPosition.iPosX : 0;
+        rtGdiplus.Y = (overlayInfo.st_FontPosition.iPosY > 0) ? overlayInfo.st_FontPosition.iPosY : 0;
+        rtGdiplus.Width = (float)iSrcWidth;
         rtGdiplus.Height = -1;
         graphicsTest.MeasureString(overlayInfo.szOverlayString, -1, &font, rtGdiplus, &rectfOut);
         printf("MeasureString width = %f, height = %f\n", rectfOut.Width, rectfOut.Height);
     }
-
-    Gdiplus::Bitmap bmpDst(iWidth, iHeight + (int)(rectfOut.Height));
+    float fDestWidth = 0.0, fDestHeight = 0.0;
+    if (overlayInfo.st_FontPosition.iPosY == POS_UP_TO_IMG   \
+        || overlayInfo.st_FontPosition.iPosY == POS_DOWN_TO_IMG
+        )
+    {
+        fDestWidth = iSrcWidth;
+        fDestHeight = iSrcHeight + rectfOut.Height;
+    }
+    else
+    {
+        fDestWidth = iSrcWidth;
+        fDestHeight = iSrcHeight;
+    }
+    Gdiplus::Bitmap bmpDst(fDestWidth, fDestHeight);
     Gdiplus::Graphics    graphics(&bmpDst);
 
+    //先画图，再画矩形
     Gdiplus::Status rSata = Gdiplus::Ok;
     Gdiplus::Rect destRect;
     destRect.X = 0;
-    destRect.Y = 0;
-    destRect.Width = iWidth;
-    destRect.Height = bmpDst.GetHeight();
-    Gdiplus::SolidBrush myBrush(Gdiplus::Color(255, 0, 0, 255));
-    graphics.FillRectangle(&myBrush, destRect);
-    destRect.Height = iHeight;
+    destRect.Y = (overlayInfo.st_FontPosition.iPosY == POS_UP_TO_IMG) ? rectfOut.Height : 0;
+    destRect.Width = iSrcWidth;
+    destRect.Height = iSrcHeight;
     rSata = graphics.DrawImage(&bmpSrc, destRect);
     if (rSata != Gdiplus::Ok)
     {
@@ -1009,18 +1080,25 @@ int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInf
         return 4;
     }
 
-    Gdiplus::RectF rectFinal;
-    rectFinal.X = 0;
-    rectFinal.Y = (float)iHeight;
-    rectFinal.Width = rectfOut.Width;
-    rectFinal.Height = rectfOut.Height;
-    //Gdiplus::Pen myPen(Gdiplus::Color(255, 0, 0, 255));
-    //graphics.DrawRectangle(&myPen, rectFinal);
-
-    rSata = graphics.DrawString(overlayInfo.szOverlayString, -1, &font, rectFinal, NULL, &fontBrush);
+    //绘制矩形填充区
+    switch (overlayInfo.st_FontPosition.iPosY)
+    {
+    case POS_UP_TO_IMG:        //矩形绘制到图片上方之外
+        destRect.Y = 0;
+        break;
+    case POS_DOWN_TO_IMG:        //矩形绘制到图片下方之外
+        destRect.Y = iSrcHeight;
+        break;
+    default:       //图片之内
+        destRect.Y = (overlayInfo.st_FontPosition.iPosY < 0) ? 0 : overlayInfo.st_FontPosition.iPosY;
+        break;
+    }
+    destRect.Height = rectfOut.Height;
+    Gdiplus::SolidBrush myBrush(Gdiplus::Color(overlayInfo.st_backgroundColor.iColorAlpha, overlayInfo.st_backgroundColor.iColorR, overlayInfo.st_backgroundColor.iColorG, overlayInfo.st_backgroundColor.iColorB));
+    rSata = graphics.FillRectangle(&myBrush, destRect);  //绘制矩形背景颜色
     if (rSata != Gdiplus::Ok)
     {
-        printf("draw string failed.\n");
+        printf("draw Rectangle failed.\n");
         iRet = 5;
 
         if (pStreamOut != NULL)
@@ -1036,26 +1114,20 @@ int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInf
         }
         return 5;
     }
-    printf("DrawString status = %d\n", rSata);
 
-    CLSID jpgClsid;
-    CLSID bmpClsid;
-    //Tool_GetEncoderClsid(L"image/jpeg", &jpgClsid);
-    Tool_GetEncoderClsid(L"image/bmp", &bmpClsid);
+    Gdiplus::RectF rectString;
+    rectString.X = overlayInfo.st_FontPosition.iPosX;
+    rectString.Y = destRect.Y;
+    rectString.Width = rectfOut.Width;
+    rectString.Height = rectfOut.Height;
+//#ifdef DEBUG
+//    graphics.DrawRectangle(&myPen, rectString);
+//#endif
 
-    // 将位图按照JPG的格式保存到输出流中
-    //int iQuality = 80 % 100;
-    //EncoderParameters encoderParameters;
-    //encoderParameters.Count = 1;
-    //encoderParameters.Parameter[0].Guid = EncoderQuality;
-    //encoderParameters.Parameter[0].Type = EncoderParameterValueTypeLong;
-    //encoderParameters.Parameter[0].NumberOfValues = 1;
-    //encoderParameters.Parameter[0].Value = &iQuality;
-    //bmpDst.Save(pStreamOut, &jpgClsid, &encoderParameters);
-    rSata = bmpDst.Save(pStreamOut, &bmpClsid, NULL);
+    rSata = graphics.DrawString(overlayInfo.szOverlayString, -1, &font, rectString, NULL, &fontBrush);
     if (rSata != Gdiplus::Ok)
     {
-        printf("save to stream out failed.\n");
+        printf("draw string failed.\n");
         iRet = 6;
 
         if (pStreamOut != NULL)
@@ -1071,15 +1143,27 @@ int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInf
         }
         return 6;
     }
+    printf("DrawString status = %d\n", rSata);
 
-    // 获取输出流大小
-    ULARGE_INTEGER libNewPos = { 0 };
-    pStreamOut->Seek(liTemp, STREAM_SEEK_END, &libNewPos);      // 将流指针指向结束位置，从而获取流的大小 
-    if (destBufferSize < (int)libNewPos.LowPart)                     // 用户分配的缓冲区不足
+    CLSID jpgClsid;
+    CLSID bmpClsid;
+    Tool_GetEncoderClsid(L"image/jpeg", &jpgClsid);
+    Tool_GetEncoderClsid(L"image/bmp", &bmpClsid);
+
+    // 将位图按照JPG的格式保存到输出流中
+    //int iQuality = 80 % 100;
+    //EncoderParameters encoderParameters;
+    //encoderParameters.Count = 1;
+    //encoderParameters.Parameter[0].Guid = EncoderQuality;
+    //encoderParameters.Parameter[0].Type = EncoderParameterValueTypeLong;
+    //encoderParameters.Parameter[0].NumberOfValues = 1;
+    //encoderParameters.Parameter[0].Value = &iQuality;
+    //bmpDst.Save(pStreamOut, &jpgClsid, &encoderParameters);
+    rSata = bmpDst.Save(pStreamOut, &bmpClsid, NULL);
+    if (rSata != Gdiplus::Ok)
     {
-        destBufferSize = libNewPos.LowPart;
+        printf("save to stream out failed.\n");
         iRet = 7;
-        printf("the buffer size is not enough.\n");
 
         if (pStreamOut != NULL)
         {
@@ -1093,6 +1177,29 @@ int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInf
             pStreamSrc = NULL;
         }
         return 7;
+    }
+
+    // 获取输出流大小
+    ULARGE_INTEGER libNewPos = { 0 };
+    pStreamOut->Seek(liTemp, STREAM_SEEK_END, &libNewPos);      // 将流指针指向结束位置，从而获取流的大小 
+    if (destBufferSize < (int)libNewPos.LowPart)                     // 用户分配的缓冲区不足
+    {
+        destBufferSize = libNewPos.LowPart;
+        iRet = 8;
+        printf("the buffer size is not enough.\n");
+
+        if (pStreamOut != NULL)
+        {
+            pStreamOut->Release();
+            pStreamOut = NULL;
+        }
+
+        if (pStreamSrc != NULL)
+        {
+            pStreamSrc->Release();
+            pStreamSrc = NULL;
+        }
+        return 8;
     }
     else
     {
@@ -1233,4 +1340,112 @@ void Tool_Bin2BMP(PBYTE pbBinData, PBYTE pbBmpData, INT& nBmpLen)
     int iBitmapDataLen = 0;
     Tool_BinImage2BitmapData(BIN_WIDTH, BIN_HEIGHT, (PBYTE)pbByteBinImage, (char*)pbBmpData, &iBitmapDataLen);
     nBmpLen = iBitmapDataLen;
+}
+
+int DrawHeadString(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength, const char* overlayString, int posX, int posY)
+{
+    if (NULL == srcImgData
+        || NULL == destImgData
+        || srcLength <= 0
+        || destLength <= 0
+        || NULL == overlayString
+        )
+    {
+        return false;
+    }
+    ImgDataStruct dataStruct;
+    dataStruct.srcImgData = (unsigned char*)srcImgData;
+    dataStruct.srcImgDataLengh = srcLength;
+
+    OverlayInfo overlayInfo1;
+    overlayInfo1.st_backgroundColor.iColorAlpha = 55;
+    overlayInfo1.st_backgroundColor.iColorR = 0;
+    overlayInfo1.st_backgroundColor.iColorG = 0;
+    overlayInfo1.st_backgroundColor.iColorB = 0;
+
+    overlayInfo1.iFontSize = 32;
+    overlayInfo1.st_fontColor.iColorAlpha = 255;
+    overlayInfo1.st_fontColor.iColorR = 255;
+    overlayInfo1.st_fontColor.iColorG = 255;
+    overlayInfo1.st_fontColor.iColorB = 255;
+
+    overlayInfo1.st_FontPosition.iPosX = posX;
+    overlayInfo1.st_FontPosition.iPosY = posY;
+
+    std::wstring wstrOverlayInfo = Img_string2wstring(overlayString);
+    overlayInfo1.szOverlayString = wstrOverlayInfo.c_str();
+
+    return DrawStringToImg(dataStruct, overlayInfo1, destImgData, destLength);
+}
+
+int DrawEnd1String(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength, const char* overlayString, int posX, int posY)
+{
+    if (NULL == srcImgData
+        || NULL == destImgData
+        || srcLength <= 0
+        || destLength <= 0
+        || NULL == overlayString
+        )
+    {
+        return false;
+    }
+    ImgDataStruct dataStruct;
+    dataStruct.srcImgData = (unsigned char*)srcImgData;
+    dataStruct.srcImgDataLengh = srcLength;
+
+    OverlayInfo overlayInfo1;
+    overlayInfo1.st_backgroundColor.iColorAlpha = 55;
+    overlayInfo1.st_backgroundColor.iColorR = 128;
+    overlayInfo1.st_backgroundColor.iColorG = 128;
+    overlayInfo1.st_backgroundColor.iColorB = 128;
+
+    overlayInfo1.iFontSize = 32;
+    overlayInfo1.st_fontColor.iColorAlpha = 255;
+    overlayInfo1.st_fontColor.iColorR = 255;
+    overlayInfo1.st_fontColor.iColorG = 255;
+    overlayInfo1.st_fontColor.iColorB = 255;
+
+    overlayInfo1.st_FontPosition.iPosX = posX;
+    overlayInfo1.st_FontPosition.iPosY = posY;
+
+    std::wstring wstrOverlayInfo = Img_string2wstring(overlayString);
+    overlayInfo1.szOverlayString = wstrOverlayInfo.c_str();
+
+    return DrawStringToImg(dataStruct, overlayInfo1, destImgData, destLength);
+}
+
+int DrawEnd2String(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength,const char* overlayString, int posX, int posY)
+{
+    if (NULL == srcImgData
+        || NULL == destImgData
+        || srcLength <= 0
+        || destLength <= 0
+        || NULL == overlayString
+        )
+    {
+        return false;
+    }
+    ImgDataStruct dataStruct;
+    dataStruct.srcImgData = (unsigned char*)srcImgData;
+    dataStruct.srcImgDataLengh = srcLength;
+
+    OverlayInfo overlayInfo1;
+    overlayInfo1.st_backgroundColor.iColorAlpha = 55;
+    overlayInfo1.st_backgroundColor.iColorR = 0;
+    overlayInfo1.st_backgroundColor.iColorG = 0;
+    overlayInfo1.st_backgroundColor.iColorB = 255;
+
+    overlayInfo1.iFontSize = 32;
+    overlayInfo1.st_fontColor.iColorAlpha = 255;
+    overlayInfo1.st_fontColor.iColorR = 255;
+    overlayInfo1.st_fontColor.iColorG = 255;
+    overlayInfo1.st_fontColor.iColorB = 0;
+
+    overlayInfo1.st_FontPosition.iPosX = posX;
+    overlayInfo1.st_FontPosition.iPosY = posY;
+
+    std::wstring wstrOverlayInfo = Img_string2wstring(overlayString);
+    overlayInfo1.szOverlayString = wstrOverlayInfo.c_str();
+
+    return DrawStringToImg(dataStruct, overlayInfo1, destImgData, destLength);
 }

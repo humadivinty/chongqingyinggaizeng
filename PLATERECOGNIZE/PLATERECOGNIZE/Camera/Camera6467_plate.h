@@ -1,5 +1,13 @@
 #pragma once
 #include "BaseCamera.h"
+
+typedef struct tag_StreeInfo 
+{
+    int iStreetNumber;      //车道号
+    std::string strStreetName;   //路口名称
+    std::string strStreetDirection;  //路口方向
+}StreeInfo;
+
 class Camera6467_plate :    public BaseCamera
 {
 public:
@@ -26,6 +34,9 @@ public:
     void StopPlayVideo();
     void SetExitStatusVideo();
     bool GetOneImgFromVideo(int format, PBYTE dataBuffer, int* bufferLenght);
+
+    bool GetStreetInfo(StreeInfo& info);
+    void SetStreetInfo(StreeInfo& info);
 private:
     void AnalysisAppendInfo(CameraResult* CamResult);
     void ReadConfig() override;

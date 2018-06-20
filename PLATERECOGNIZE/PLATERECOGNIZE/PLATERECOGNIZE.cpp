@@ -14,9 +14,11 @@ extern void g_ReadKeyValueFromConfigFile(const char* nodeName, const char* keyNa
 std::shared_ptr<Camera6467_plate> g_pCamera;
 std::shared_ptr<uint8_t> g_pImgData;
 std::shared_ptr<uint8_t> g_pImgData2;
+std::shared_ptr<uint8_t> g_pImgData3;
 std::shared_ptr<CameraResult> g_pLastResult;
 std::string g_strLastpicID;
 std::string g_strOverlayInfo;
+std::wstring g_overlayText;
 
 bool CheckCamerIsValid()
 {
@@ -56,6 +58,20 @@ uint8_t* GetImgBufferAddress2()
     }
     return pData;
 }
+uint8_t* GetImgBufferAddress3()
+{
+    uint8_t* pData = NULL;
+    if (!g_pImgData3)
+    {
+        g_pImgData3 = std::shared_ptr<uint8_t>(new uint8_t[MAX_IMG_SIZE], std::default_delete<uint8_t[]>());
+    }
+    if (g_pImgData3)
+    {
+        pData = g_pImgData3.get();
+        memset(pData, 0, MAX_IMG_SIZE);
+    }
+    return pData;
+}
 
 std::shared_ptr<CameraResult> g_GetResult(const char* PicId)
 {
@@ -85,7 +101,7 @@ std::shared_ptr<CameraResult> g_GetResult(const char* PicId)
 int g_iVideoWidth = 0, g_iVideoHeight = 0;
 int g_iTimePosX = 1500, g_iTimePosY = 1000;
 char g_szOverlayInfo[512] = {0};
-std::wstring g_overlayText;
+
 
 PLATERECOGNIZE_API BOOL WINAPI Plate_InitDevice(HWND hHandle, int Msg, int PorType, char * PortName, long Baudrate, char * Px)
 {
@@ -268,28 +284,131 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
             {
                 std::wstring wstrOverlayInfo = Img_string2wstring(Overlay);
                 g_overlayText = wstrOverlayInfo;
-                ImgDataStruct dataStruct;
-                dataStruct.srcImgData = (UCHAR*)pData;
-                dataStruct.srcImgDataLengh = iDataLength;
-                OverlayInfo oInfo;
-                oInfo.iColorR = 255;
-                oInfo.iColorG = 255;
-                oInfo.iColorB = 255;
-                oInfo.iFontSize = 32;
-                oInfo.szOverlayString = wstrOverlayInfo.c_str();
-                uint8_t* pBmpBuffer = GetImgBufferAddress();
-                long iDestBufSize = MAX_IMG_SIZE;
+                g_strOverlayInfo = Overlay;
+                StreeInfo st_StreetInfo;
+                g_pCamera->GetStreetInfo(st_StreetInfo);
 
-                int iRet = DrawStringToImg(dataStruct, oInfo, pBmpBuffer, iDestBufSize);
-                dataStruct.srcImgData = NULL;
-                oInfo.szOverlayString = NULL;
+                struct tm local;
+                time_t nowtime;
+                nowtime = time(NULL); //获取日历时间  
+                //local = localtime(&nowtime);  //获取当前系统时间
+                localtime_s(&local, &nowtime);
+                char szOverlayInfo[MAX_PATH] = {0};
+                sprintf_s(szOverlayInfo, sizeof(szOverlayInfo), "%s\t\t%04d年%02d月%02d日 %02d:%02d:%02d",
+                    st_StreetInfo.strStreetName.c_str(),
+                    local.tm_year + 1900, local.tm_mon + 1, local.tm_wday,
+                    local.tm_hour, local.tm_min, local.tm_sec);
+
+                uint8_t* pBmpBuffer1 = GetImgBufferAddress();
+                size_t iDestBufSize1 = MAX_IMG_SIZE;
+                uint8_t* pBmpBuffer2 = GetImgBufferAddress2();
+                size_t iDestBufSize2 = MAX_IMG_SIZE;
+
+                uint8_t* pBuf = pBmpBuffer1;
+                size_t  iBufSize = MAX_IMG_SIZE;
+                //叠加第一行 时间、地点信息
+                int iRet = DrawHeadString(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, 0, 0);
+                memset(chLog, 0, sizeof(chLog));
+                sprintf_s(chLog, sizeof(chLog), "Draw HeadString, return code = %d", iRet);
+                g_WriteLog(chLog);
                 if (iRet == 0)
                 {
-                    g_WriteLog("DrawStringToImg success.");
-                    uint8_t* pJPGBuffer = GetImgBufferAddress2();
+                    pData = pBuf;
+                    iDataLength = iBufSize;
+
+                    pBuf = pBmpBuffer2;
+                    memset(pBuf, 0, MAX_IMG_SIZE);
+                    iBufSize = MAX_IMG_SIZE;                    
+                }
+                else
+                {
+                    memset(pBuf, 0, MAX_IMG_SIZE);
+                    iBufSize = MAX_IMG_SIZE;
+                }
+
+                //叠加第二行 抓拍信息
+                memset(szOverlayInfo, 0, sizeof(szOverlayInfo));
+                sprintf_s(szOverlayInfo, sizeof(szOverlayInfo), "收费站:%s\t车道号:%d\t抓拍时间:%s\t抓拍车牌号:%s", 
+                    st_StreetInfo.strStreetDirection.c_str(),
+                    st_StreetInfo.iStreetNumber,
+                    Result->chPlateTime,
+                    Result->chPlateNO);
+                iRet = DrawEnd1String(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, 0, -2);
+                memset(chLog, 0, sizeof(chLog));
+                sprintf_s(chLog, sizeof(chLog), "Draw End1 String, return code = %d", iRet);
+                g_WriteLog(chLog);
+                if (iRet == 0)
+                {
+                    pData = pBuf;
+                    iDataLength = iBufSize;
+
+                    if (pData == pBmpBuffer1)
+                    {
+                        pBuf = pBmpBuffer2;
+                    }
+                    else
+                    {
+                        pBuf = pBmpBuffer1;
+                    }
+                    memset(pBuf, 0, MAX_IMG_SIZE);
+                    iBufSize = MAX_IMG_SIZE;
+                }
+                else
+                {
+                    memset(pBuf, 0, MAX_IMG_SIZE);
+                    iBufSize = MAX_IMG_SIZE;
+                }
+
+                //叠加第三行 收费信息
+                memset(szOverlayInfo, 0, sizeof(szOverlayInfo));
+                size_t iLength = strlen(Overlay);
+                if (iLength <= sizeof(szOverlayInfo))
+                {
+                    memcpy(szOverlayInfo, Overlay, iLength); 
+                    iLength = iLength > 0 ? iLength - 1 : 0;
+                    szOverlayInfo[iLength] = '\0';
+                }
+                else
+                {
+                    memcpy(szOverlayInfo, Overlay, sizeof(szOverlayInfo));
+                    szOverlayInfo[sizeof(szOverlayInfo) -1] = '\0';
+                }                
+                iRet = DrawEnd2String(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, 0, -2);
+                memset(chLog, 0, sizeof(chLog));
+                sprintf_s(chLog, sizeof(chLog), "Draw End1 String, return code = %d", iRet);
+                g_WriteLog(chLog);
+                if (iRet == 0)
+                {
+                    pData = pBuf;
+                    iDataLength = iBufSize;
+
+                    if (pData == pBmpBuffer1)
+                    {
+                        pBuf = pBmpBuffer2;
+                    }
+                    else
+                    {
+                        pBuf = pBmpBuffer1;
+                    }
+                    memset(pBuf, 0, MAX_IMG_SIZE);
+                    iBufSize = MAX_IMG_SIZE;
+                }
+                else
+                {
+                    memset(pBuf, 0, MAX_IMG_SIZE);
+                    iBufSize = MAX_IMG_SIZE;
+                } 
+                //iRet = DrawStringToImg(dataStruct, oInfo, pBmpBuffer, iDestBufSize);
+                if (iRet == 0)
+                {
+                    g_WriteLog("DrawStringToImg success.");                    
+                    uint8_t* pJPGBuffer = (pData == pBmpBuffer1) ? pBmpBuffer2 : pBmpBuffer1;
+                    memset(pJPGBuffer, 0, MAX_IMG_SIZE);
                     DWORD iJpgBufSize = MAX_IMG_SIZE;                    
 
-                    if (Tool_Img_ScaleJpg(pBmpBuffer, iDestBufSize, pJPGBuffer, &iJpgBufSize, iWidth, iHeight, 50))
+                    INT iWishSize = 150 * 1024;
+                    iWidth = 1600, iHeight = 1200;
+                    if (Tool_Img_compress((uint8_t*)pData, iDataLength, pJPGBuffer, &iJpgBufSize, iWidth, iHeight, iWishSize))
                     {
                         g_WriteLog("compress image success.");
                         bRet = Tool_SaveFileToDisk(ImageInfo, pJPGBuffer, iJpgBufSize);
@@ -303,10 +422,12 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
                 }
                 else
                 {
-                    g_WriteLog("DrawStringToImg failed, use default.");
+                    memset(chLog, 0, sizeof(chLog));
+                    //sprintf_s(chLog, sizeof(chLog), "DrawStringToImg failed, error code= %d ,need buffer size = %ld, use default.", iRet, iDestBufSize);
+                    sprintf_s(chLog, sizeof(chLog), "DrawStringToImg failed, error code= %d , use default.", iRet);
+                    g_WriteLog(chLog);
                     bRet = Tool_SaveFileToDisk(ImageInfo, pData, iDataLength);
                 }
-                pBmpBuffer = NULL;
             }
             else
             {
@@ -391,10 +512,11 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetState(int* State)
     sprintf_s(chLog, sizeof(chLog), "Plate_GetState, begin, State = %p", State);
     g_WriteLog(chLog);
 
-    bool bRet = FALSE;
+    bool bRet = false;
     if (CheckCamerIsValid())
     {
         *State = g_pCamera->GetCamStatus();
+        bRet = true;
     }
     else
     {
@@ -508,25 +630,28 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_Screenshot(char * ImageInfo)
             g_WriteLog("GetOneImgFromVideo succeed.");
             if (g_overlayText.length() > 0)
             {
-                ImgDataStruct dataStruct;
-                dataStruct.srcImgData = pBuffer;
-                dataStruct.srcImgDataLengh = iBufferSize;
-                OverlayInfo oInfo;
-                oInfo.iColorR = 255;
-                oInfo.iColorG = 255;
-                oInfo.iColorB = 255;
-                oInfo.iFontSize = 32;
-                oInfo.szOverlayString = g_overlayText.c_str();
-                uint8_t* pDestBuffer = new uint8_t[MAX_IMG_SIZE];
-                long iDestBufSize = MAX_IMG_SIZE;
-
-                if (0 == DrawStringToImg(dataStruct, oInfo, pDestBuffer, iDestBufSize))
+                //ImgDataStruct dataStruct;
+                //dataStruct.srcImgData = pBuffer;
+                //dataStruct.srcImgDataLengh = iBufferSize;
+                //OverlayInfo oInfo;
+                //oInfo.iColorR = 255;
+                //oInfo.iColorG = 255;
+                //oInfo.iColorB = 255;
+                //oInfo.iFontSize = 32;
+                //oInfo.szOverlayString = g_overlayText.c_str();
+                //uint8_t* pDestBuffer = new uint8_t[MAX_IMG_SIZE];
+                //size_t iDestBufSize = MAX_IMG_SIZE;
+                //int iRet = DrawStringToImg(dataStruct, oInfo, pDestBuffer, iDestBufSize);
+                uint8_t* pDestBuffer = GetImgBufferAddress3();
+                size_t iDestBufSize = MAX_IMG_SIZE;
+                int iRet = DrawEnd2String(pBuffer, iBufferSize, pDestBuffer, iDestBufSize, g_strOverlayInfo.c_str(), 0, -2);
+                if (iRet == 0)
                 {
                     g_WriteLog("DrawStringToImg success.");
                     uint8_t* pJPGBuffer = GetImgBufferAddress();
                     DWORD iJpgBufSize = MAX_IMG_SIZE;
 
-                    if (Tool_Img_ScaleJpg(pDestBuffer, iDestBufSize, pJPGBuffer, &iJpgBufSize, 1920, 1080, 30))
+                    if (Tool_Img_compress(pDestBuffer, iDestBufSize, pJPGBuffer, &iJpgBufSize, 1600, 1200, COMPRESS_IMG_SIZE))
                     {
                         g_WriteLog("compress image success.");
                         bRet = Tool_SaveFileToDisk(ImageInfo, pJPGBuffer, iJpgBufSize);
@@ -534,23 +659,26 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_Screenshot(char * ImageInfo)
                     }
                     else
                     {
-                        g_WriteLog("compress image failed, use orig image.");
+                        memset(chLog, 0, sizeof(chLog));
+                        sprintf_s(chLog, sizeof(chLog), "DrawStringToImg failed, error code= %d ,need buffer size = %ld, use default.", iRet, iDestBufSize);
+                        g_WriteLog(chLog);
                         bRet = Tool_SaveFileToDisk(ImageInfo, pBuffer, iBufferSize);
-                    }                    
+                    }
                 }
                 else
                 {
                     g_WriteLog("DrawStringToImg failed, use default.");
                     bRet = Tool_SaveFileToDisk(ImageInfo, pBuffer, iBufferSize);
-                }                
-                dataStruct.srcImgData = NULL;
-                oInfo.szOverlayString = NULL;
-
-                if (pDestBuffer)
-                {
-                    delete[] pDestBuffer;
-                    pDestBuffer = NULL;
                 }
+                pDestBuffer = NULL;
+                //dataStruct.srcImgData = NULL;
+                //oInfo.szOverlayString = NULL;
+
+                //if (pDestBuffer)
+                //{
+                //    delete[] pDestBuffer;
+                //    pDestBuffer = NULL;
+                //}
             }
             else
             {
@@ -663,6 +791,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_ShowTime()
         if (g_pCamera->SetOverlayTimeEnable(0, true))
         {
             g_WriteLog("show video time succeed.");
+            bRet = true;
         }
         else
         {
@@ -688,6 +817,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_CloseTime()
         if (g_pCamera->SetOverlayTimeEnable(0, false))
         {
             g_WriteLog("close video time succeed.");
+            bRet = true;
         }
         else
         {

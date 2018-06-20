@@ -8,7 +8,7 @@
 #define RECORD_BIGIMG_BEST_CAPTURE			0x0004	/**< 最清晰抓拍图 */
 #define RECORD_BIGIMG_LAST_CAPTURE			0x0005	/**<  最后抓拍图 */
 
-#define  MAX_IMG_SIZE (10*1024*1024)
+#define  MAX_IMG_SIZE (20*1024*1024)
 #define COMPRESS_IMG_SIZE (150 * 1024)
 
 class CameraIMG

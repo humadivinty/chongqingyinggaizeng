@@ -24,22 +24,46 @@ typedef struct _ImgDataStruct{
     }
 }ImgDataStruct;
 
+typedef struct tag_COLOR_INFO
+{
+    int iColorAlpha;        //透明度  0-255 其中0为全透明
+    int iColorR;               //红色分量 0-255
+    int iColorG;               //绿色分量 0-255
+    int iColorB;               //蓝色分量 0-255
+
+    tag_COLOR_INFO() :
+        iColorAlpha(255),
+        iColorR(255),
+        iColorG(255),
+        iColorB(255)
+    {  }
+}COLOR_INFO;
+
+typedef struct tag_PositionInfo
+{
+    int iPosX;          //字符叠加的左顶点 x 坐标， 范围是大于等于0，
+    int iPosY;          //字符叠加的左顶点 y 坐标 ， 当值为-1时， 在图片的上方之外的区域叠加 ; 值为-2时， 在图片下方之外的区域叠加， 其他负数的值按-2处理, 默认为-2                            
+
+    tag_PositionInfo() :
+        iPosX(0),
+        iPosY(-2)
+    {};
+
+}PositionInfo;
+
 typedef struct _OverlayInfo
 {
-    const WCHAR* szOverlayString;
-    int itextLength;
-    int iFontSize;
-    int iColorR;
-    int iColorG;
-    int iColorB;
+    const WCHAR* szOverlayString;     //需要叠加的字符串
+    int itextLength;                    //字符串长度
+    int iFontSize;                        //叠加字符的大小
+    COLOR_INFO st_fontColor;    //字体颜色
+    COLOR_INFO st_backgroundColor;  //背景颜色
+    PositionInfo st_FontPosition;    //叠加字符的位置
 
     _OverlayInfo() :
         szOverlayString(NULL),
         itextLength(0),
-        iFontSize(12),
-        iColorR(0),
-        iColorG(0),
-        iColorB(0)
+        iFontSize(32)
     {
     }
     ~_OverlayInfo()
@@ -48,7 +72,6 @@ typedef struct _OverlayInfo
     }
 
 }OverlayInfo;
-
 
 //通过节点名查找并返回相应节点
 //注：XMLTYPE 为1时，InputInfo为XML路径，当为2时,InputInfo为二进制文件内容
@@ -72,6 +95,8 @@ long Tool_GetFileSize(const char *FileName);
 bool PingIPaddress(const char* IpAddress);
 
 bool Tool_Img_ScaleJpg(PBYTE pbSrc, int iSrcLen, PBYTE pbDst, DWORD *iDstLen, int iDstWidth, int iDstHeight, int compressQuality);
+
+bool Tool_Img_compress(PBYTE pbSrc, int iSrcLen, PBYTE pbDst, DWORD *iDstLen, int iDstWidth, int iDstHeight, int wishSize);
 
 int Tool_GetEncoderClsid(const WCHAR* format, CLSID* pClsid);
 
@@ -105,7 +130,7 @@ bool Tool_SaveFileToDisk(char* chImgPath, void* pImgData, DWORD dwImgSize);
 std::string GetSoftVersion(const char* exepath);
 #endif
 
-int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInfo, UCHAR* destImgBuffer, long& destBufferSize);
+int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInfo, void* destImgBuffer, size_t& destBufferSize);
 
 //************************************
 // Method:        Tool_RgbBin2ByteBin
@@ -147,3 +172,41 @@ BOOL Tool_BinImage2BitmapData(int iCX, int iCY, BYTE* pbByteBinImage, char* pbBi
 // Parameter:    INT & nBmpLen          :Bmp缓冲大小
 //************************************
 void Tool_Bin2BMP(PBYTE pbBinData, PBYTE pbBmpData, INT& nBmpLen);
+
+
+int DrawHeadString(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength, const char* overlayString, int posX, int posY);
+
+
+//************************************
+// Method:        DrawEnd1String
+// Describe:        该函数为定制函数，在图片底部叠加白色文字，背景填充颜色为灰色
+// FullName:      DrawEnd1String
+// Access:          public 
+// Returns:        int
+// Returns Describe:
+// Parameter:    void * srcImgData
+// Parameter:    size_t srcLength
+// Parameter:    void * destImgData
+// Parameter:    size_t & destLength
+// Parameter:    char * overlayString
+// Parameter:    int posX
+// Parameter:    int posY
+//************************************
+int DrawEnd1String(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength, const char* overlayString, int posX, int posY);
+
+//************************************
+// Method:        DrawEnd2String
+// Describe:        该函数为定制函数，在图片底部叠加黄色文字，背景填充颜色为蓝色
+// FullName:      DrawEnd2String
+// Access:          public 
+// Returns:        int
+// Returns Describe:
+// Parameter:    void * srcImgData
+// Parameter:    size_t srcLength
+// Parameter:    void * destImgData
+// Parameter:    size_t & destLength
+// Parameter:    char * overlayString
+// Parameter:    int posX
+// Parameter:    int posY
+//************************************
+int DrawEnd2String(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength, const char* overlayString, int posX, int posY);

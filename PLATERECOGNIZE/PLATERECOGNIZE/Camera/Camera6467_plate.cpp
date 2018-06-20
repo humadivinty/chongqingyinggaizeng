@@ -1486,6 +1486,19 @@ bool Camera6467_plate::GetOneImgFromVideo(int format, PBYTE dataBuffer, int* buf
     }
 }
 
+bool Camera6467_plate::GetStreetInfo(StreeInfo& info)
+{
+    info.iStreetNumber = 0;
+    info.strStreetName = "重庆高速公司";
+    info.strStreetDirection = "涪陵收费站";
+    return true;
+}
+
+void Camera6467_plate::SetStreetInfo(StreeInfo& info)
+{
+
+}
+
 void Camera6467_plate::SetResultComplete(bool bfinish)
 {
     EnterCriticalSection(&m_csResult);

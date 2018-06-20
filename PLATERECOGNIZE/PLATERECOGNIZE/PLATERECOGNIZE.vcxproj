@@ -57,6 +57,7 @@
       <SDLCheck>true</SDLCheck>
       <CallingConvention>Cdecl</CallingConvention>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
