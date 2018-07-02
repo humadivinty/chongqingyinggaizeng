@@ -230,7 +230,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetInfo(char * PlateInfor, int 
 
 PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * ImageInfo, char * PicId, char * Overlay)
 {
-    char chLog[256] = { 0 };
+    char chLog[512] = { 0 };
     sprintf_s(chLog, sizeof(chLog), "Plate_GetImage, begin, ImageType = %d, ImageInfo = %s, PicId = %s, Overlay = %s",
         ImageType, \
         ImageInfo, \
@@ -285,8 +285,6 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
                 std::wstring wstrOverlayInfo = Img_string2wstring(Overlay);
                 g_overlayText = wstrOverlayInfo;
                 g_strOverlayInfo = Overlay;
-                StreeInfo st_StreetInfo;
-                g_pCamera->GetStreetInfo(st_StreetInfo);
 
                 struct tm local;
                 time_t nowtime;
@@ -294,10 +292,13 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
                 //local = localtime(&nowtime);  //获取当前系统时间
                 localtime_s(&local, &nowtime);
                 char szOverlayInfo[MAX_PATH] = {0};
-                sprintf_s(szOverlayInfo, sizeof(szOverlayInfo), "%s\t\t%04d年%02d月%02d日 %02d:%02d:%02d",
-                    st_StreetInfo.strStreetName.c_str(),
-                    local.tm_year + 1900, local.tm_mon + 1, local.tm_wday,
-                    local.tm_hour, local.tm_min, local.tm_sec);
+                //sprintf_s(szOverlayInfo, sizeof(szOverlayInfo), "%s\t\t%04d年%02d月%02d日 %02d:%02d:%02d",
+                //    st_StreetInfo.strStreetName.c_str(),
+                //    local.tm_year + 1900, local.tm_mon + 1, local.tm_wday,
+                //    local.tm_hour, local.tm_min, local.tm_sec);
+                sprintf_s(szOverlayInfo, sizeof(szOverlayInfo), "%s", Result->chSignStationName);
+                MyRectf rectfOut;
+                Tool_CalculateStringWithAndHeight(szOverlayInfo, iWidth, iHeight, 32, rectfOut);
 
                 uint8_t* pBmpBuffer1 = GetImgBufferAddress();
                 size_t iDestBufSize1 = MAX_IMG_SIZE;
@@ -306,10 +307,10 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
 
                 uint8_t* pBuf = pBmpBuffer1;
                 size_t  iBufSize = MAX_IMG_SIZE;
-                //叠加第一行 时间、地点信息
-                int iRet = DrawHeadString(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, 0, 0);
+                //叠加第一行 地点信息
+                int iRet = DrawHeadStyleString(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, 32, (int)rectfOut.Height);
                 memset(chLog, 0, sizeof(chLog));
-                sprintf_s(chLog, sizeof(chLog), "Draw HeadString, return code = %d", iRet);
+                sprintf_s(chLog, sizeof(chLog), "Draw HeadString 1, return code = %d", iRet);
                 g_WriteLog(chLog);
                 if (iRet == 0)
                 {
@@ -326,14 +327,50 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
                     iBufSize = MAX_IMG_SIZE;
                 }
 
+                //叠加第一行 时间信息
+                memset(szOverlayInfo, 0, sizeof(szOverlayInfo));
+                sprintf_s(szOverlayInfo, sizeof(szOverlayInfo), "%04d年%02d月%02d日 %02d:%02d:%02d",                   
+                    local.tm_year + 1900, local.tm_mon + 1, local.tm_mday, \
+                    local.tm_hour, local.tm_min, local.tm_sec);
+                memset(&rectfOut, 0, sizeof(rectfOut));
+                Tool_CalculateStringWithAndHeight(szOverlayInfo, iWidth, iHeight, 32, rectfOut);
+
+                iRet = DrawHeadStyleString(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, iWidth - rectfOut.Width - 32, (int)rectfOut.Height);
+                memset(chLog, 0, sizeof(chLog));
+                sprintf_s(chLog, sizeof(chLog), "Draw HeadString 2, return code = %d", iRet);
+                g_WriteLog(chLog);
+                if (iRet == 0)
+                {
+                    pData = pBuf;
+                    iDataLength = iBufSize;
+
+                    if (pData == pBmpBuffer1)
+                    {
+                        pBuf = pBmpBuffer2;
+                    }
+                    else
+                    {
+                        pBuf = pBmpBuffer1;
+                    }
+                    memset(pBuf, 0, MAX_IMG_SIZE);
+                    iBufSize = MAX_IMG_SIZE;
+                }
+                else
+                {
+                    memset(pBuf, 0, MAX_IMG_SIZE);
+                    iBufSize = MAX_IMG_SIZE;
+                }
+
                 //叠加第二行 抓拍信息
                 memset(szOverlayInfo, 0, sizeof(szOverlayInfo));
-                sprintf_s(szOverlayInfo, sizeof(szOverlayInfo), "收费站:%s\t车道号:%d\t抓拍时间:%s\t抓拍车牌号:%s", 
-                    st_StreetInfo.strStreetDirection.c_str(),
-                    st_StreetInfo.iStreetNumber,
-                    Result->chPlateTime,
-                    Result->chPlateNO);
-                iRet = DrawEnd1String(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, 0, -2);
+                //sprintf_s(szOverlayInfo, sizeof(szOverlayInfo), "收费站:%s\t车道号:%d\t抓拍时间:%s\t抓拍车牌号:%s", 
+                //    st_StreetInfo.strStreetDirection.c_str(),
+                //    st_StreetInfo.iStreetNumber,
+                //    Result->chPlateTime,
+                //    Result->chPlateNO);
+                //iRet = DrawEnd1String(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, 0, -2);
+                sprintf_s(szOverlayInfo, sizeof(szOverlayInfo), "%s%s", Result->chPlateColor, Result->chPlateNO);
+                iRet = DrawEnd1String(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, 32, iHeight - 2 * 32);
                 memset(chLog, 0, sizeof(chLog));
                 sprintf_s(chLog, sizeof(chLog), "Draw End1 String, return code = %d", iRet);
                 g_WriteLog(chLog);
@@ -361,16 +398,17 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
 
                 //叠加第三行 收费信息
                 memset(szOverlayInfo, 0, sizeof(szOverlayInfo));
+                szOverlayInfo[0] = '\n';
                 size_t iLength = strlen(Overlay);
-                if (iLength <= sizeof(szOverlayInfo))
+                if (iLength < sizeof(szOverlayInfo))
                 {
-                    memcpy(szOverlayInfo, Overlay, iLength); 
-                    iLength = iLength > 0 ? iLength - 1 : 0;
-                    szOverlayInfo[iLength] = '\0';
+                    memcpy(szOverlayInfo+1, Overlay, iLength); 
+                    iLength = iLength > 0 ? iLength : 0;
+                    szOverlayInfo[iLength+1] = '\0';
                 }
                 else
                 {
-                    memcpy(szOverlayInfo, Overlay, sizeof(szOverlayInfo));
+                    memcpy(szOverlayInfo+1, Overlay, sizeof(szOverlayInfo));
                     szOverlayInfo[sizeof(szOverlayInfo) -1] = '\0';
                 }                
                 iRet = DrawEnd2String(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, 0, -2);
@@ -404,10 +442,10 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
                     g_WriteLog("DrawStringToImg success.");                    
                     uint8_t* pJPGBuffer = (pData == pBmpBuffer1) ? pBmpBuffer2 : pBmpBuffer1;
                     memset(pJPGBuffer, 0, MAX_IMG_SIZE);
-                    DWORD iJpgBufSize = MAX_IMG_SIZE;                    
+                    size_t iJpgBufSize = MAX_IMG_SIZE;                    
 
                     INT iWishSize = 150 * 1024;
-                    iWidth = 1600, iHeight = 1200;
+                    iWidth = 1600, iHeight = 1280;
                     if (Tool_Img_compress((uint8_t*)pData, iDataLength, pJPGBuffer, &iJpgBufSize, iWidth, iHeight, iWishSize))
                     {
                         g_WriteLog("compress image success.");
@@ -438,7 +476,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
                         uint8_t* pBmpBuffer = GetImgBufferAddress();
                         int ibmpBufLength = MAX_IMG_SIZE;
                         uint8_t* pJpgBuffer = GetImgBufferAddress2();
-                        DWORD dwJpgBufLength = MAX_IMG_SIZE;
+                        size_t dwJpgBufLength = MAX_IMG_SIZE;
 
                         Tool_Bin2BMP((PBYTE)pData, pBmpBuffer, ibmpBufLength);
                         bRet = Tool_Img_ScaleJpg(pBmpBuffer, ibmpBufLength, pJpgBuffer, &dwJpgBufLength, iWidth, iHeight, 80);
@@ -462,7 +500,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
                     if (pData)
                     {
                         uint8_t* pJpgBuffer = GetImgBufferAddress2();
-                        DWORD dwJpgBufLength = MAX_IMG_SIZE;
+                        size_t dwJpgBufLength = MAX_IMG_SIZE;
                         bRet = Tool_Img_ScaleJpg((PBYTE)pData, iDataLength, pJpgBuffer, &dwJpgBufLength, iWidth, iHeight, 80);
                         if (bRet)
                         {
@@ -649,7 +687,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_Screenshot(char * ImageInfo)
                 {
                     g_WriteLog("DrawStringToImg success.");
                     uint8_t* pJPGBuffer = GetImgBufferAddress();
-                    DWORD iJpgBufSize = MAX_IMG_SIZE;
+                    size_t iJpgBufSize = MAX_IMG_SIZE;
 
                     if (Tool_Img_compress(pDestBuffer, iDestBufSize, pJPGBuffer, &iJpgBufSize, 1600, 1200, COMPRESS_IMG_SIZE))
                     {

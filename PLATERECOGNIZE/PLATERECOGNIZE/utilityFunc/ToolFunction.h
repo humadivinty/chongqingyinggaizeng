@@ -56,6 +56,7 @@ typedef struct _OverlayInfo
     const WCHAR* szOverlayString;     //需要叠加的字符串
     int itextLength;                    //字符串长度
     int iFontSize;                        //叠加字符的大小
+    int iStyle;                             //叠加风格: 1时,只在字符背后叠加；2时整行叠加; 默认为2
     COLOR_INFO st_fontColor;    //字体颜色
     COLOR_INFO st_backgroundColor;  //背景颜色
     PositionInfo st_FontPosition;    //叠加字符的位置
@@ -63,7 +64,8 @@ typedef struct _OverlayInfo
     _OverlayInfo() :
         szOverlayString(NULL),
         itextLength(0),
-        iFontSize(32)
+        iFontSize(32),
+        iStyle(2)
     {
     }
     ~_OverlayInfo()
@@ -72,6 +74,21 @@ typedef struct _OverlayInfo
     }
 
 }OverlayInfo;
+
+typedef struct tag_RectF
+{
+    float X;
+    float Y;
+    float Width;
+    float Height;
+
+    tag_RectF() :
+        X(0.0),
+        Y(0.0),
+        Width(0.0),
+        Height(0.0)
+    {}
+}MyRectf;
 
 //通过节点名查找并返回相应节点
 //注：XMLTYPE 为1时，InputInfo为XML路径，当为2时,InputInfo为二进制文件内容
@@ -94,9 +111,9 @@ long Tool_GetFileSize(const char *FileName);
 
 bool PingIPaddress(const char* IpAddress);
 
-bool Tool_Img_ScaleJpg(PBYTE pbSrc, int iSrcLen, PBYTE pbDst, DWORD *iDstLen, int iDstWidth, int iDstHeight, int compressQuality);
+bool Tool_Img_ScaleJpg(PBYTE pbSrc, int iSrcLen, PBYTE pbDst, size_t *iDstLen, int iDstWidth, int iDstHeight, int compressQuality);
 
-bool Tool_Img_compress(PBYTE pbSrc, int iSrcLen, PBYTE pbDst, DWORD *iDstLen, int iDstWidth, int iDstHeight, int wishSize);
+bool Tool_Img_compress(PBYTE pbSrc, int iSrcLen, PBYTE pbDst, size_t *iDstLen, int iDstWidth, int iDstHeight, int wishSize);
 
 int Tool_GetEncoderClsid(const WCHAR* format, CLSID* pClsid);
 
@@ -174,7 +191,7 @@ BOOL Tool_BinImage2BitmapData(int iCX, int iCY, BYTE* pbByteBinImage, char* pbBi
 void Tool_Bin2BMP(PBYTE pbBinData, PBYTE pbBmpData, INT& nBmpLen);
 
 
-int DrawHeadString(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength, const char* overlayString, int posX, int posY);
+int DrawHeadStyleString(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength, const char* overlayString, int posX, int posY);
 
 
 //************************************
@@ -210,3 +227,5 @@ int DrawEnd1String(void* srcImgData, size_t srcLength, void* destImgData, size_t
 // Parameter:    int posY
 //************************************
 int DrawEnd2String(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength, const char* overlayString, int posX, int posY);
+
+bool Tool_CalculateStringWithAndHeight(const char* overlayString, const int imageWidth, const int imageHeight, const int fontSize, MyRectf& rectfOut);

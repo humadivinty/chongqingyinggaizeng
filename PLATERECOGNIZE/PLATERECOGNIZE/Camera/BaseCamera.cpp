@@ -1015,7 +1015,7 @@ void BaseCamera::CompressImg(CameraIMG& camImg, DWORD requireSize)
         return;
     }
 
-    DWORD iImgSize = MAX_IMG_SIZE;
+    size_t iImgSize = MAX_IMG_SIZE;
     int iCompressQuality = 80;
     PBYTE pDestImg = new BYTE[iImgSize];
     do

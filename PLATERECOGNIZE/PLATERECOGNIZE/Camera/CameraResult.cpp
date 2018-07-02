@@ -146,6 +146,11 @@ CameraResult::CameraResult()
 		chSignStationName[i] = 0;
 	}
 
+    for (unsigned int i = 0; i < sizeof(chSignStationDirection); i++)
+    {
+        chSignStationDirection[i] = 0;
+    }
+
 	for (unsigned int i = 0; i < sizeof(chLaneID); i++)
 	{
 		chLaneID[i] = 0;
@@ -224,6 +229,11 @@ CameraResult::CameraResult( const CameraResult& CaRESULT )
 		chSignStationName[i] = CaRESULT.chSignStationName[i];
 	}
 
+    for (unsigned int i = 0; i < sizeof(chSignStationDirection); i++)
+    {
+        chSignStationDirection[i] = CaRESULT.chSignStationDirection[i];
+    }
+
 	for (unsigned int i = 0; i < sizeof(chLaneID); i++)
 	{
 		chLaneID[i] = CaRESULT.chLaneID[i];
@@ -276,6 +286,7 @@ CameraResult::~CameraResult()
 	memset(chPlateTime, 0, sizeof(chPlateTime));
 	memset(chSignStationID, 0, sizeof(chSignStationID));
 	memset(chSignStationName, 0, sizeof(chSignStationName));
+    memset(chSignStationDirection, 0, sizeof(chSignStationDirection));
 	memset(pcAppendInfo, 0, sizeof(pcAppendInfo));
 	memset(chLaneID, 0, sizeof(chLaneID));
 	memset(chDeviceID, 0, sizeof(chDeviceID));
@@ -350,6 +361,10 @@ CameraResult& CameraResult::operator=( const CameraResult& CaRESULT )
 		chSignStationName[i] = CaRESULT.chSignStationName[i];
 	}
 
+    for (unsigned int i = 0; i < sizeof(chSignStationDirection); i++)
+    {
+        chSignStationDirection[i] = CaRESULT.chSignStationDirection[i];
+    }
 	for (unsigned int i = 0; i < sizeof(chLaneID); i++)
 	{
 		chLaneID[i] = CaRESULT.chLaneID[i];

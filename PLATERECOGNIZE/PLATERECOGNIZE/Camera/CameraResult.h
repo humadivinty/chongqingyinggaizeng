@@ -17,12 +17,12 @@ public:
 	CameraIMG();
 	CameraIMG(const CameraIMG& CaIMG);
 	~CameraIMG();
-	unsigned long wImgWidth;
-	unsigned long wImgHeight;
-	DWORD dwImgSize;
-	unsigned long  wImgType;
-	char chSavePath[256];
-	PBYTE pbImgData;
+    char chSavePath[256];
+	unsigned char* pbImgData;
+    unsigned long wImgWidth;
+    unsigned long wImgHeight;
+    unsigned long dwImgSize;
+    unsigned long  wImgType;
 
 	CameraIMG& operator = (const CameraIMG& CaIMG);
 };
@@ -34,12 +34,29 @@ public:
 	CameraResult();
 	CameraResult(const CameraResult& CaRESULT);
 	~CameraResult();
+public:
+    char pcAppendInfo[2048];
+    char chSignStationName[256];
+    char chSignStationDirection[256];
+    char chListNo[256];
+    char chPlateTime[256];
+    char chDeviceIp[64];
+    char chPlateNO[64];
+    char chPlateColor[64];
+    char chSignStationID[64];
+    char chDeviceID[64];
+    char chLaneID[64];
 
-	DWORD dwCarID;
+    DWORD64 dw64TimeMS;
+    unsigned long dwCarID;
+
+    float fVehLenth;			//车长
+    float fDistanceBetweenAxles;		//轴距
+    float fVehHeight;		//车高
+
 	int iDeviceID;
 	int iPlateColor;
-	int iPlateTypeNo;
-	DWORD64 dw64TimeMS;
+	int iPlateTypeNo;	
 	int iSpeed;
 	int iResultNo;
 	int iVehTypeNo;		//车型代码: 客1--1 。。。客4--4， 货1--5  。。。货4--8
@@ -50,27 +67,11 @@ public:
 	int iLaneNo;
 	int iDirection;
 	int iWheelCount;		//轮数
-	long iAxletreeCount;		//轴数
+	int iAxletreeCount;		//轴数
 	int iAxletreeGroupCount;//轴组数
 	int iAxletreeType;		//轴型
     int iReliability;       //可信度
-	float fVehLenth;			//车长
-	float fDistanceBetweenAxles;		//轴距
-	float fVehHeight;		//车高
 	bool bBackUpVeh;		//是否倒车
-
-
-	char chDeviceIp[32];
-	char chPlateNO[32];
-	char chPlateColor[10];
-	char chListNo[256];
-	char chPlateTime[256];
-	char chSignStationID[50];
-	char chSignStationName[50];
-	char pcAppendInfo[2048];
-
-	char chDeviceID[3];
-	char chLaneID[3];
 
 	CameraIMG CIMG_BestSnapshot;	/**< 最清晰识别图 */
 	CameraIMG CIMG_LastSnapshot;	/**< 最后识别图 */
@@ -80,6 +81,7 @@ public:
 	CameraIMG CIMG_PlateImage;		/**< 车牌小图 */
 	CameraIMG CIMG_BinImage;			/**< 车牌二值图 */
 
+public:
 	CameraResult& operator = (const CameraResult& CaRESULT);
 
 	friend bool SerializationResultToDisk(const char* chFilePath, const CameraResult& CaResult);
@@ -90,17 +92,17 @@ public:
 };
 
 typedef struct _tagSafeModeInfo
-{
-	int iEableSafeMode;
+{	
 	char chBeginTime[256];
 	char chEndTime[256];
+    int iEableSafeMode;
 	int index;
 	int DataInfo;
 	_tagSafeModeInfo()
-	{
-		iEableSafeMode = 0;
+	{		
 		memset(chBeginTime, 0, sizeof(chBeginTime));
 		memset(chEndTime, 0, sizeof(chEndTime));
+        iEableSafeMode = 0;
 		index = 0;
 		DataInfo = 0;
 	}

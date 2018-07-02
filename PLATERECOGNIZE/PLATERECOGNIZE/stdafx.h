@@ -28,7 +28,7 @@
 #define MY_SPRINTF sprintf_s
 #endif
 
-#define DLL_VERSION "2018051101"
+#define DLL_VERSION "2018062601"
 #define INI_FILE_NAME "\\PLATERECOGNIZE_XLW.ini"
 #define DLL_LOG_NAME "PLATERECOGNIZE_log.txt"
 

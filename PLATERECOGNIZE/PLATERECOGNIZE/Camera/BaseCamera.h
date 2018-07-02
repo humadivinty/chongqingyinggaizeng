@@ -172,9 +172,9 @@ protected:
     bool m_bSynTime;
     bool m_bStatusCheckThreadExit;
 
-    char m_chDeviceID[3];
-    char m_chStationID[7];
-    char m_chLaneID[3];
+    char m_chDeviceID[64];
+    char m_chStationID[64];
+    char m_chLaneID[64];
 
     std::string m_strIP;
     std::string m_strDeviceID;

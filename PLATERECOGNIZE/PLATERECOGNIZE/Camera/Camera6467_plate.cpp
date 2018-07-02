@@ -277,15 +277,19 @@ void Camera6467_plate::AnalysisAppendInfo(CameraResult* record)
     {
         record->iLaneNo = 0;
     }
+
+    pchObj = (char *)strstr(record->pcAppendInfo, "路口名称");
+    if (pchObj)
+    {
+        sscanf_s(pchObj, "路口名称:%s", record->chSignStationName, sizeof(record->chSignStationName));
+    }
+
     pchObj = (char *)strstr(record->pcAppendInfo, "路口方向");
     if (pchObj)
     {
-        sscanf_s(pchObj, "路口方向:%d", &(record->iDirection));
+        sscanf_s(pchObj, "路口方向:%s", record->chSignStationDirection, sizeof(record->chSignStationDirection));
     }
-    else
-    {
-        record->iDirection = 0;
-    }
+
     //if (0 != record->dw64TimeMS)
     //{
     //	CTime tm(record->dw64TimeMS/1000);
@@ -1484,19 +1488,6 @@ bool Camera6467_plate::GetOneImgFromVideo(int format, PBYTE dataBuffer, int* buf
         WriteLog("GetOneImgFromVideo, the buffer space is apply failed.");
         return false;
     }
-}
-
-bool Camera6467_plate::GetStreetInfo(StreeInfo& info)
-{
-    info.iStreetNumber = 0;
-    info.strStreetName = "重庆高速公司";
-    info.strStreetDirection = "涪陵收费站";
-    return true;
-}
-
-void Camera6467_plate::SetStreetInfo(StreeInfo& info)
-{
-
 }
 
 void Camera6467_plate::SetResultComplete(bool bfinish)

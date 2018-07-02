@@ -332,7 +332,7 @@ bool PingIPaddress(const char* IpAddress)
 	}
 }
 
-bool Tool_Img_ScaleJpg(PBYTE pbSrc, int iSrcLen, PBYTE pbDst, DWORD *iDstLen, int iDstWidth, int iDstHeight, int compressQuality)
+bool Tool_Img_ScaleJpg(PBYTE pbSrc, int iSrcLen, PBYTE pbDst, size_t *iDstLen, int iDstWidth, int iDstHeight, int compressQuality)
 {
     if (pbSrc == NULL || iSrcLen <= 0)
     {
@@ -461,11 +461,11 @@ bool Tool_Img_ScaleJpg(PBYTE pbSrc, int iSrcLen, PBYTE pbDst, DWORD *iDstLen, in
     return bRet;
 }
 
-bool Tool_Img_compress(PBYTE pbSrc, int iSrcLen, PBYTE pbDst, DWORD *iDstLen, int iDstWidth, int iDstHeight, int wishSize)
+bool Tool_Img_compress(PBYTE pbSrc, int iSrcLen, PBYTE pbDst, size_t *iDstLen, int iDstWidth, int iDstHeight, int wishSize)
 {
     if (pbSrc == NULL || pbDst == NULL
         || iSrcLen <= 0 || *iDstLen <= 0
-        || *iDstLen < wishSize)
+        || *iDstLen < (size_t)wishSize)
     {
         printf("Tool_Img_compress, pbSrc == NULL || pbDst == NULL || iSrcLen <= 0 || *iDstLen <= 0, the parameter is invalid.\n");
         return false;
@@ -485,10 +485,10 @@ bool Tool_Img_compress(PBYTE pbSrc, int iSrcLen, PBYTE pbDst, DWORD *iDstLen, in
         return false;
     }
 
-    DWORD iBufSize = iMaxImgSize;
+    size_t iBufSize = iMaxImgSize;
     int iCompressQuality = 65;
     memset(pBuffer, 0, iMaxImgSize);
-    while (iCompressQuality > 0 && iBufSize >= wishSize)
+    while (iCompressQuality > 0 && iBufSize >= (size_t)wishSize)
     {
         iBufSize = iMaxImgSize;
         memset(pBuffer, 0, iMaxImgSize);
@@ -496,7 +496,7 @@ bool Tool_Img_compress(PBYTE pbSrc, int iSrcLen, PBYTE pbDst, DWORD *iDstLen, in
         iCompressQuality -= 15;
     }
     bool bRet = false;
-    if (iBufSize > wishSize)
+    if (iBufSize > (size_t)wishSize)
     {
         printf("after compress , the size is still larger than wish size.\n");
         *iDstLen = iBufSize;
@@ -945,6 +945,10 @@ int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInf
 {
 #define POS_UP_TO_IMG (-1)
 #define POS_DOWN_TO_IMG (-2)
+
+#define STYLE_ONLY_FONT_BACKGROUND (1)
+#define STYLE_WHOLE_LINE (2)
+
     if (!dataStruct.srcImgData || dataStruct.srcImgDataLengh <= 0 || !destImgBuffer || destBufferSize <= 0)
     {
         printf("myDrawString, the parameter is invalid, return 1.\n ");
@@ -1022,7 +1026,7 @@ int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInf
     Gdiplus::Color fontColor(overlayInfo.st_fontColor.iColorAlpha, overlayInfo.st_fontColor.iColorR, overlayInfo.st_fontColor.iColorG, overlayInfo.st_fontColor.iColorB);
     Gdiplus::SolidBrush  fontBrush(fontColor);
     Gdiplus::FontFamily  fontFamily(L"Times New Roman");
-    Gdiplus::Font        font(&fontFamily, overlayInfo.iFontSize, FontStyleRegular, UnitPixel);
+    Gdiplus::Font        font(&fontFamily, (float)(overlayInfo.iFontSize), FontStyleRegular, UnitPixel);
 
     Gdiplus::RectF  rectfOut;
     {
@@ -1037,26 +1041,26 @@ int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInf
         graphicsTest.MeasureString(overlayInfo.szOverlayString, -1, &font, rtGdiplus, &rectfOut);
         printf("MeasureString width = %f, height = %f\n", rectfOut.Width, rectfOut.Height);
     }
-    float fDestWidth = 0.0, fDestHeight = 0.0;
+    int iDestWidth = 0.0, iDestHeight = 0.0;
     if (overlayInfo.st_FontPosition.iPosY == POS_UP_TO_IMG   \
         || overlayInfo.st_FontPosition.iPosY == POS_DOWN_TO_IMG
         )
     {
-        fDestWidth = iSrcWidth;
-        fDestHeight = iSrcHeight + rectfOut.Height;
+        iDestWidth = iSrcWidth;
+        iDestHeight = (iSrcHeight + rectfOut.Height);
     }
     else
     {
-        fDestWidth = iSrcWidth;
-        fDestHeight = iSrcHeight;
+        iDestWidth =iSrcWidth;
+        iDestHeight = iSrcHeight;
     }
-    Gdiplus::Bitmap bmpDst(fDestWidth, fDestHeight);
+    Gdiplus::Bitmap bmpDst(iDestWidth, iDestHeight);
     Gdiplus::Graphics    graphics(&bmpDst);
 
     //先画图，再画矩形
     Gdiplus::Status rSata = Gdiplus::Ok;
     Gdiplus::Rect destRect;
-    destRect.X = 0;
+    destRect.X =0;
     destRect.Y = (overlayInfo.st_FontPosition.iPosY == POS_UP_TO_IMG) ? rectfOut.Height : 0;
     destRect.Width = iSrcWidth;
     destRect.Height = iSrcHeight;
@@ -1081,18 +1085,37 @@ int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInf
     }
 
     //绘制矩形填充区
+    
     switch (overlayInfo.st_FontPosition.iPosY)
     {
     case POS_UP_TO_IMG:        //矩形绘制到图片上方之外
+        destRect.X = 0;
         destRect.Y = 0;
         break;
     case POS_DOWN_TO_IMG:        //矩形绘制到图片下方之外
+        destRect.X = 0;
         destRect.Y = iSrcHeight;
         break;
     default:       //图片之内
+        destRect.X = (overlayInfo.st_FontPosition.iPosX >= 0) ? overlayInfo.st_FontPosition.iPosX : 0;
         destRect.Y = (overlayInfo.st_FontPosition.iPosY < 0) ? 0 : overlayInfo.st_FontPosition.iPosY;
         break;
     }
+
+    //矩形宽度决策
+    switch (overlayInfo.iStyle)
+    {
+    case STYLE_ONLY_FONT_BACKGROUND:        //
+        destRect.Width = rectfOut.Width;
+        break;
+    case STYLE_WHOLE_LINE:        //矩形绘制到整行        
+        destRect.Width = iSrcWidth;
+        break;
+    default:       //图片之内
+        destRect.Width = iSrcWidth;
+        break;
+    }
+
     destRect.Height = rectfOut.Height;
     Gdiplus::SolidBrush myBrush(Gdiplus::Color(overlayInfo.st_backgroundColor.iColorAlpha, overlayInfo.st_backgroundColor.iColorR, overlayInfo.st_backgroundColor.iColorG, overlayInfo.st_backgroundColor.iColorB));
     rSata = graphics.FillRectangle(&myBrush, destRect);  //绘制矩形背景颜色
@@ -1342,7 +1365,7 @@ void Tool_Bin2BMP(PBYTE pbBinData, PBYTE pbBmpData, INT& nBmpLen)
     nBmpLen = iBitmapDataLen;
 }
 
-int DrawHeadString(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength, const char* overlayString, int posX, int posY)
+int DrawHeadStyleString(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength, const char* overlayString, int posX, int posY)
 {
     if (NULL == srcImgData
         || NULL == destImgData
@@ -1374,6 +1397,7 @@ int DrawHeadString(void* srcImgData, size_t srcLength, void* destImgData, size_t
 
     std::wstring wstrOverlayInfo = Img_string2wstring(overlayString);
     overlayInfo1.szOverlayString = wstrOverlayInfo.c_str();
+    overlayInfo1.iStyle = 1;
 
     return DrawStringToImg(dataStruct, overlayInfo1, destImgData, destLength);
 }
@@ -1395,9 +1419,9 @@ int DrawEnd1String(void* srcImgData, size_t srcLength, void* destImgData, size_t
 
     OverlayInfo overlayInfo1;
     overlayInfo1.st_backgroundColor.iColorAlpha = 55;
-    overlayInfo1.st_backgroundColor.iColorR = 128;
-    overlayInfo1.st_backgroundColor.iColorG = 128;
-    overlayInfo1.st_backgroundColor.iColorB = 128;
+    overlayInfo1.st_backgroundColor.iColorR = 0;
+    overlayInfo1.st_backgroundColor.iColorG = 0;
+    overlayInfo1.st_backgroundColor.iColorB = 0;
 
     overlayInfo1.iFontSize = 32;
     overlayInfo1.st_fontColor.iColorAlpha = 255;
@@ -1410,6 +1434,7 @@ int DrawEnd1String(void* srcImgData, size_t srcLength, void* destImgData, size_t
 
     std::wstring wstrOverlayInfo = Img_string2wstring(overlayString);
     overlayInfo1.szOverlayString = wstrOverlayInfo.c_str();
+    overlayInfo1.iStyle = 1;
 
     return DrawStringToImg(dataStruct, overlayInfo1, destImgData, destLength);
 }
@@ -1430,10 +1455,10 @@ int DrawEnd2String(void* srcImgData, size_t srcLength, void* destImgData, size_t
     dataStruct.srcImgDataLengh = srcLength;
 
     OverlayInfo overlayInfo1;
-    overlayInfo1.st_backgroundColor.iColorAlpha = 55;
-    overlayInfo1.st_backgroundColor.iColorR = 0;
-    overlayInfo1.st_backgroundColor.iColorG = 0;
-    overlayInfo1.st_backgroundColor.iColorB = 255;
+    overlayInfo1.st_backgroundColor.iColorAlpha = 255;
+    overlayInfo1.st_backgroundColor.iColorR = 11;
+    overlayInfo1.st_backgroundColor.iColorG = 113;
+    overlayInfo1.st_backgroundColor.iColorB = 177;
 
     overlayInfo1.iFontSize = 32;
     overlayInfo1.st_fontColor.iColorAlpha = 255;
@@ -1448,4 +1473,45 @@ int DrawEnd2String(void* srcImgData, size_t srcLength, void* destImgData, size_t
     overlayInfo1.szOverlayString = wstrOverlayInfo.c_str();
 
     return DrawStringToImg(dataStruct, overlayInfo1, destImgData, destLength);
+}
+
+bool Tool_CalculateStringWithAndHeight(const char* overlayString, const int imageWidth, const int imageHeight, const int fontSize, MyRectf& rectfOut)
+{
+    if (overlayString == NULL
+        || imageWidth <= 0
+        || imageHeight <= 0
+        || fontSize <= 0
+        )
+    {
+        printf("Tool_CalculateStringWithAndHeight, failed, parameter is invalid, overlayString = %p, imageWidth = %d, imageHeight = %d, fontSize = %d\n",
+            overlayString, \
+            imageWidth, imageWidth, \
+            fontSize);
+        return false;
+    }
+    size_t iSrcWidth = 0, iSrcHeight = 0;
+    iSrcWidth = imageWidth;
+    iSrcHeight = imageHeight;
+
+    Gdiplus::RectF  TempRectf;
+    //计算消息主题的高度
+    Gdiplus::Bitmap bgtest(iSrcWidth, iSrcHeight);
+    Gdiplus::Graphics    graphicsTest(&bgtest);
+    Gdiplus::RectF rtGdiplus;//计算消息主题的宽度
+    std::wstring  wstrOverlay = Img_string2wstring(overlayString);
+    Gdiplus::FontFamily  fontFamily(L"Times New Roman");
+    Gdiplus::Font        font(&fontFamily, fontSize, FontStyleRegular, UnitPixel);
+
+    rtGdiplus.X = 0;
+    rtGdiplus.Y = 0;
+    rtGdiplus.Width = iSrcWidth;
+    rtGdiplus.Height = -1;
+    Gdiplus::Status calSta = graphicsTest.MeasureString(wstrOverlay.c_str(), -1, &font, rtGdiplus, &TempRectf);
+    printf("calSta =%d,  MeasureString width = %f, height = %f\n", calSta, TempRectf.Width, TempRectf.Height);
+
+    rectfOut.X = TempRectf.X;
+    rectfOut.Y = TempRectf.Y;
+    rectfOut.Width = TempRectf.Width;
+    rectfOut.Height = TempRectf.Height;
+    return true;
 }
