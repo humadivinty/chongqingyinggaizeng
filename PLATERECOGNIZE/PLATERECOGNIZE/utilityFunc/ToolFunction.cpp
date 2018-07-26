@@ -1025,7 +1025,7 @@ int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInf
 
     Gdiplus::Color fontColor(overlayInfo.st_fontColor.iColorAlpha, overlayInfo.st_fontColor.iColorR, overlayInfo.st_fontColor.iColorG, overlayInfo.st_fontColor.iColorB);
     Gdiplus::SolidBrush  fontBrush(fontColor);
-    Gdiplus::FontFamily  fontFamily(L"Times New Roman");
+    Gdiplus::FontFamily  fontFamily(overlayInfo.szFontFamily);
     Gdiplus::Font        font(&fontFamily, (float)(overlayInfo.iFontSize), FontStyleRegular, UnitPixel);
 
     Gdiplus::RectF  rectfOut;
@@ -1381,6 +1381,7 @@ int DrawHeadStyleString(void* srcImgData, size_t srcLength, void* destImgData, s
     dataStruct.srcImgDataLengh = srcLength;
 
     OverlayInfo overlayInfo1;
+    overlayInfo1.szFontFamily = L"黑体";
     overlayInfo1.st_backgroundColor.iColorAlpha = 55;
     overlayInfo1.st_backgroundColor.iColorR = 0;
     overlayInfo1.st_backgroundColor.iColorG = 0;
@@ -1418,6 +1419,7 @@ int DrawEnd1String(void* srcImgData, size_t srcLength, void* destImgData, size_t
     dataStruct.srcImgDataLengh = srcLength;
 
     OverlayInfo overlayInfo1;
+    overlayInfo1.szFontFamily = L"黑体";
     overlayInfo1.st_backgroundColor.iColorAlpha = 55;
     overlayInfo1.st_backgroundColor.iColorR = 0;
     overlayInfo1.st_backgroundColor.iColorG = 0;
@@ -1455,6 +1457,7 @@ int DrawEnd2String(void* srcImgData, size_t srcLength, void* destImgData, size_t
     dataStruct.srcImgDataLengh = srcLength;
 
     OverlayInfo overlayInfo1;
+    overlayInfo1.szFontFamily = L"Times New Roman";
     overlayInfo1.st_backgroundColor.iColorAlpha = 255;
     overlayInfo1.st_backgroundColor.iColorR = 11;
     overlayInfo1.st_backgroundColor.iColorG = 113;
@@ -1475,12 +1478,15 @@ int DrawEnd2String(void* srcImgData, size_t srcLength, void* destImgData, size_t
     return DrawStringToImg(dataStruct, overlayInfo1, destImgData, destLength);
 }
 
-bool Tool_CalculateStringWithAndHeight(const char* overlayString, const int imageWidth, const int imageHeight, const int fontSize, MyRectf& rectfOut)
+bool Tool_CalculateStringWithAndHeight(const char* overlayString, const int imageWidth, const int imageHeight, 
+    const int fontSize, const WCHAR* szFontFamily, 
+    MyRectf& rectfOut)
 {
     if (overlayString == NULL
         || imageWidth <= 0
         || imageHeight <= 0
         || fontSize <= 0
+        || szFontFamily == NULL
         )
     {
         printf("Tool_CalculateStringWithAndHeight, failed, parameter is invalid, overlayString = %p, imageWidth = %d, imageHeight = %d, fontSize = %d\n",
@@ -1499,7 +1505,7 @@ bool Tool_CalculateStringWithAndHeight(const char* overlayString, const int imag
     Gdiplus::Graphics    graphicsTest(&bgtest);
     Gdiplus::RectF rtGdiplus;//计算消息主题的宽度
     std::wstring  wstrOverlay = Img_string2wstring(overlayString);
-    Gdiplus::FontFamily  fontFamily(L"Times New Roman");
+    Gdiplus::FontFamily  fontFamily(szFontFamily);
     Gdiplus::Font        font(&fontFamily, fontSize, FontStyleRegular, UnitPixel);
 
     rtGdiplus.X = 0;

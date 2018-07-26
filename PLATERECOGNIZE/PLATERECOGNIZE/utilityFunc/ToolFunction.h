@@ -54,6 +54,7 @@ typedef struct tag_PositionInfo
 typedef struct _OverlayInfo
 {
     const WCHAR* szOverlayString;     //需要叠加的字符串
+    const WCHAR* szFontFamily;
     int itextLength;                    //字符串长度
     int iFontSize;                        //叠加字符的大小
     int iStyle;                             //叠加风格: 1时,只在字符背后叠加；2时整行叠加; 默认为2
@@ -63,6 +64,7 @@ typedef struct _OverlayInfo
 
     _OverlayInfo() :
         szOverlayString(NULL),
+        szFontFamily(L"Times New Roman"),
         itextLength(0),
         iFontSize(32),
         iStyle(2)
@@ -228,4 +230,6 @@ int DrawEnd1String(void* srcImgData, size_t srcLength, void* destImgData, size_t
 //************************************
 int DrawEnd2String(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength, const char* overlayString, int posX, int posY);
 
-bool Tool_CalculateStringWithAndHeight(const char* overlayString, const int imageWidth, const int imageHeight, const int fontSize, MyRectf& rectfOut);
+bool Tool_CalculateStringWithAndHeight(const char* overlayString, const int imageWidth, const int imageHeight,
+    const int fontSize, const WCHAR* szFontFamily,
+    MyRectf& rectfOut);

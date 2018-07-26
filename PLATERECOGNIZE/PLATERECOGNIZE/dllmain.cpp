@@ -4,7 +4,7 @@
 #include "coredump/MiniDumper.h"
 #include "utilityFunc/ToolFunction.h" 
 
-
+static char g_szDLLPath[MAX_PATH] = {0};
 bool  g_bLogEnable = false;
 int g_iBackupCount = 1;
 CRITICAL_SECTION g_csDLL;
@@ -18,12 +18,17 @@ long g_GetFileSize(const char *FileName);
 void g_WriteLog(const char*);
 void g_ReadKeyValueFromConfigFile(const char* nodeName, const char* keyName, char* keyValue, int bufferSize);
 
+void  SetDllPath(const char* path);
+char* GetDllPath();
+
+
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved
 					 )
 {
     char chLog[256] = { 0 };
+    TCHAR szFileName[MAX_PATH] = { 0 };
     DWORD TID = 0;
 	switch (ul_reason_for_call)
 	{
@@ -31,6 +36,10 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         TID = GetCurrentThreadId();
         sprintf_s(chLog, sizeof(chLog),"Video_car DLL_PROCESS_ATTACH current thread ID = %lu\n", TID);
         OutputDebugStringA(chLog);
+
+        GetModuleFileName(hModule, szFileName, MAX_PATH);	//取得包括程序名的全路径
+        PathRemoveFileSpec(szFileName);				//去掉程序名
+        SetDllPath(szFileName);
 
         InitializeCriticalSection(&g_csDLL);
         break;
@@ -216,3 +225,20 @@ void g_ReadKeyValueFromConfigFile(const char* nodeName, const char* keyName, cha
 
     //WritePrivateProfileStringA(nodeName, keyName, keyValue, iniFileName);
 };
+
+void  SetDllPath(const char* path)
+{
+    if (NULL != path)
+    {
+        size_t iLength = strlen(path);
+        if (iLength < MAX_PATH)
+        {
+            memcpy(g_szDLLPath, path, iLength);
+            g_szDLLPath[iLength] = '\0';
+        }
+    }
+}
+char* GetDllPath()
+{
+    return g_szDLLPath;
+}

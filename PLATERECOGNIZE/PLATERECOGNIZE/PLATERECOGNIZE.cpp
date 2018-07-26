@@ -10,6 +10,7 @@
 
 extern void g_WriteLog(const char*);
 extern void g_ReadKeyValueFromConfigFile(const char* nodeName, const char* keyName, char* keyValue, int bufferSize);
+extern char* GetDllPath();
 
 std::shared_ptr<Camera6467_plate> g_pCamera;
 std::shared_ptr<uint8_t> g_pImgData;
@@ -298,7 +299,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
                 //    local.tm_hour, local.tm_min, local.tm_sec);
                 sprintf_s(szOverlayInfo, sizeof(szOverlayInfo), "%s", Result->chSignStationName);
                 MyRectf rectfOut;
-                Tool_CalculateStringWithAndHeight(szOverlayInfo, iWidth, iHeight, 32, rectfOut);
+                Tool_CalculateStringWithAndHeight(szOverlayInfo, iWidth, iHeight, 32, L"黑体", rectfOut);
 
                 uint8_t* pBmpBuffer1 = GetImgBufferAddress();
                 size_t iDestBufSize1 = MAX_IMG_SIZE;
@@ -333,7 +334,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
                     local.tm_year + 1900, local.tm_mon + 1, local.tm_mday, \
                     local.tm_hour, local.tm_min, local.tm_sec);
                 memset(&rectfOut, 0, sizeof(rectfOut));
-                Tool_CalculateStringWithAndHeight(szOverlayInfo, iWidth, iHeight, 32, rectfOut);
+                Tool_CalculateStringWithAndHeight(szOverlayInfo, iWidth, iHeight, 32, L"黑体", rectfOut);
 
                 iRet = DrawHeadStyleString(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, iWidth - rectfOut.Width - 32, (int)rectfOut.Height);
                 memset(chLog, 0, sizeof(chLog));
@@ -445,7 +446,8 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
                     size_t iJpgBufSize = MAX_IMG_SIZE;                    
 
                     INT iWishSize = 150 * 1024;
-                    iWidth = 1600, iHeight = 1280;
+                    iWidth = (iWidth > COMPRESS_300W_WIDTH) ? COMPRESS_300W_WIDTH : COMPRESS_200W_WIDTH;
+                    iHeight = (iHeight > COMPRESS_300W_HEIGHT) ? COMPRESS_300W_HEIGHT : COMPRESS_200W_HEIGHT;
                     if (Tool_Img_compress((uint8_t*)pData, iDataLength, pJPGBuffer, &iJpgBufSize, iWidth, iHeight, iWishSize))
                     {
                         g_WriteLog("compress image success.");
@@ -881,27 +883,47 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetDeviceInfo(char * PlateInfo)
         BasicInfo info;
         if (g_pCamera->GetHardWareInfo(info))
         {
-            TCHAR szFileName[MAX_PATH] = { 0 };
-            GetModuleFileName(NULL, szFileName, MAX_PATH);	//取得包括程序名的全路径
-            PathRemoveFileSpec(szFileName);				//去掉程序名
-            char chPath[MAX_PATH] = { 0 };
-            MY_SPRINTF(chPath, sizeof(chPath), "%s\\PLATERECOGNIZE.dll", szFileName);
-            std::string strApiVerion = GetSoftVersion(chPath);
+            std::string strDllPath = GetDllPath();
+            if (strDllPath.empty())
+            {
+                TCHAR szFileName[MAX_PATH] = { 0 };
+                GetModuleFileName(NULL, szFileName, MAX_PATH);	//取得包括程序名的全路径
+                PathRemoveFileSpec(szFileName);				//去掉程序名
+                char chPath[MAX_PATH] = { 0 };
+                MY_SPRINTF(chPath, sizeof(chPath), "%s\\PLATERECOGNIZE.dll", szFileName);
+                strDllPath = chPath;
+            }
+            else
+            {
+                strDllPath.append("\\PLATERECOGNIZE.dll");
+            }
+            g_WriteLog(strDllPath.c_str());
+            std::string strApiVerion = GetSoftVersion(strDllPath.c_str());
 
-            //                                    例如：2 | HKWS - 1 - ds | 2.0.1 | 3.2.1.1
-            //                                    表示为海康威视的型号为HKWS - 1 - ds的车牌识别，其固件版本号为2.0.1，动态库版本号为3.2.1.1
+            //   例如：2 | HKWS - 1 - ds | 2.0.1 | 3.2.1.1
+            //   表示为海康威视的型号为HKWS - 1 - ds的车牌识别，其固件版本号为2.0.1，动态库版本号为3.2.1.1
             char szDevType[128] = { 0 }, szDevVersion[64] = { 0 }, szDllVersion[64] = {0};
             memcpy(szDevType, info.szDevType, strlen(info.szDevType));
+            szDevType[strlen(info.szDevType)] = '\0';
             memcpy(szDevVersion, info.szDevVersion, strlen(info.szDevVersion));
+            szDevVersion[strlen(info.szDevVersion)] = '\0';
 
             char szVersionInfo[256] = {0};
-            sprintf_s(szVersionInfo, sizeof(szVersionInfo), "%d | %s | %s | %s", 1, szDevType, szDevVersion, strApiVerion.c_str());
+            if (strApiVerion.empty())
+            {
+                sprintf_s(szVersionInfo, sizeof(szVersionInfo), "%d | %s | %s | 1.0.0.2", 1, szDevType, szDevVersion);
+            }
+            else
+            {
+                sprintf_s(szVersionInfo, sizeof(szVersionInfo), "%d | %s | %s | %s", 1, szDevType, szDevVersion, strApiVerion.c_str());
+            } 
 
             memset(chLog, 0, sizeof(chLog));
             sprintf_s(chLog, sizeof(chLog), "Plate_GetDeviceInfo, Get version info %s.", szVersionInfo);
             g_WriteLog(chLog);
 
             memcpy(PlateInfo, szVersionInfo, strlen(szVersionInfo));
+            PlateInfo[strlen(szVersionInfo)] = '\0';
             bRet = true;
         }
     }
