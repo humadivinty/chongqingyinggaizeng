@@ -355,7 +355,7 @@ void Ctest_PLATERECOGNIZEDlg::OnBnClickedButtonScreenshot()
     BOOL bRet = Plate_Screenshot(szFilePath);
 
     char chLog[512] = { 0 };
-    sprintf_s(chLog, sizeof(chLog), "Plate_CloseVideo, path= %s, return code = %d", szFilePath, bRet);
+    sprintf_s(chLog, sizeof(chLog), "Plate_Screenshot, path= %s, return code = %d", szFilePath, bRet);
     //MessageBox(chLog);
     ShowMessage(chLog);
 }

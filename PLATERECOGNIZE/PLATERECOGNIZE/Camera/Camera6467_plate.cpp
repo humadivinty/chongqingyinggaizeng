@@ -732,117 +732,117 @@ int Camera6467_plate::RecordInfoEnd(DWORD dwCarID)
     }
     **************************************队列模式*****begin*****************************************/
 
-    if (m_bOverlay)
-    {
-        if (m_pTempBig1 == NULL)
-        {
-            m_pTempBig1 = new BYTE[MAX_IMG_SIZE];
-            memset(m_pTempBig1, 0, MAX_IMG_SIZE);
-        }
-        else
-        {
-            memset(m_pTempBig1, 0, MAX_IMG_SIZE);
-        }
+    //if (m_bOverlay)
+    //{
+    //    if (m_pTempBig1 == NULL)
+    //    {
+    //        m_pTempBig1 = new BYTE[MAX_IMG_SIZE];
+    //        memset(m_pTempBig1, 0, MAX_IMG_SIZE);
+    //    }
+    //    else
+    //    {
+    //        memset(m_pTempBig1, 0, MAX_IMG_SIZE);
+    //    }
 
-        char chOverlayInfo[256] = { 0 };
-        if (strstr(m_CameraResult->chPlateNO, "无"))
-        {
-            sprintf_s(chOverlayInfo, "时间:%s   车牌号: *****", m_CameraResult->chPlateTime);
-        }
-        else
-        {
-            sprintf_s(chOverlayInfo, "时间:%s   车牌号: %s", m_CameraResult->chPlateTime, m_CameraResult->chPlateNO);
-        }
-        std::string strOverlayInfo(chOverlayInfo);
-        std::wstring wstrOverlayIno = Img_string2wstring(strOverlayInfo);
+    //    char chOverlayInfo[256] = { 0 };
+    //    if (strstr(m_CameraResult->chPlateNO, "无"))
+    //    {
+    //        sprintf_s(chOverlayInfo, "时间:%s   车牌号: *****", m_CameraResult->chPlateTime);
+    //    }
+    //    else
+    //    {
+    //        sprintf_s(chOverlayInfo, "时间:%s   车牌号: %s", m_CameraResult->chPlateTime, m_CameraResult->chPlateNO);
+    //    }
+    //    std::string strOverlayInfo(chOverlayInfo);
+    //    std::wstring wstrOverlayIno = Img_string2wstring(strOverlayInfo);
 
-        if (m_CameraResult->CIMG_BestSnapshot.dwImgSize > 0 && m_CameraResult->CIMG_BestSnapshot.pbImgData)
-        {
-            if (m_pTempBig1)
-            {
-                memset(m_pTempBig1, 0, MAX_IMG_SIZE);
-                long iDestSize = MAX_IMG_SIZE;
+    //    if (m_CameraResult->CIMG_BestSnapshot.dwImgSize > 0 && m_CameraResult->CIMG_BestSnapshot.pbImgData)
+    //    {
+    //        if (m_pTempBig1)
+    //        {
+    //            memset(m_pTempBig1, 0, MAX_IMG_SIZE);
+    //            long iDestSize = MAX_IMG_SIZE;
 
-                memset(chLog, 0, sizeof(chLog));
-                MY_SPRINTF(chLog, "BestSnapshot开始字符叠加， text = %s", chOverlayInfo);
-                WriteLog(chLog);
-                bool bOverlay = Tool_OverlayStringToImg(&m_CameraResult->CIMG_BestSnapshot.pbImgData, m_CameraResult->CIMG_BestSnapshot.dwImgSize,
-                    &m_pTempBig1, iDestSize,
-                    wstrOverlayIno.c_str(), 32,
-                    10, 30, 255, 255, 255,
-                    50);
-                if (bOverlay)
-                {
-                    memset(chLog, 0, sizeof(chLog));
-                    MY_SPRINTF(chLog, "字符叠加成功, size = %ld, begin copy..", iDestSize);
-                    WriteLog(chLog);
+    //            memset(chLog, 0, sizeof(chLog));
+    //            MY_SPRINTF(chLog, "BestSnapshot开始字符叠加， text = %s", chOverlayInfo);
+    //            WriteLog(chLog);
+    //            bool bOverlay = Tool_OverlayStringToImg(&m_CameraResult->CIMG_BestSnapshot.pbImgData, m_CameraResult->CIMG_BestSnapshot.dwImgSize,
+    //                &m_pTempBig1, iDestSize,
+    //                wstrOverlayIno.c_str(), 32,
+    //                10, 30, 255, 255, 255,
+    //                50);
+    //            if (bOverlay)
+    //            {
+    //                memset(chLog, 0, sizeof(chLog));
+    //                MY_SPRINTF(chLog, "字符叠加成功, size = %ld, begin copy..", iDestSize);
+    //                WriteLog(chLog);
 
-                    delete[] m_CameraResult->CIMG_BestSnapshot.pbImgData;
-                    m_CameraResult->CIMG_BestSnapshot.pbImgData = new BYTE[iDestSize];
-                    memcpy(m_CameraResult->CIMG_BestSnapshot.pbImgData, m_pTempBig1, iDestSize);
-                    m_CameraResult->CIMG_BestSnapshot.dwImgSize = iDestSize;
+    //                delete[] m_CameraResult->CIMG_BestSnapshot.pbImgData;
+    //                m_CameraResult->CIMG_BestSnapshot.pbImgData = new BYTE[iDestSize];
+    //                memcpy(m_CameraResult->CIMG_BestSnapshot.pbImgData, m_pTempBig1, iDestSize);
+    //                m_CameraResult->CIMG_BestSnapshot.dwImgSize = iDestSize;
 
-                    WriteLog("finish copy.");
-                }
-                else
-                {
-                    WriteLog("字符叠加失败,使用原图数据.");
-                }
+    //                WriteLog("finish copy.");
+    //            }
+    //            else
+    //            {
+    //                WriteLog("字符叠加失败,使用原图数据.");
+    //            }
 
-            }
-        }
+    //        }
+    //    }
 
-        if (m_CameraResult->CIMG_LastSnapshot.dwImgSize > 0 && m_CameraResult->CIMG_LastSnapshot.pbImgData)
-        {
-            if (m_pTempBig1)
-            {
-                memset(m_pTempBig1, 0, MAX_IMG_SIZE);
-                long iDestSize = MAX_IMG_SIZE;
+    //    if (m_CameraResult->CIMG_LastSnapshot.dwImgSize > 0 && m_CameraResult->CIMG_LastSnapshot.pbImgData)
+    //    {
+    //        if (m_pTempBig1)
+    //        {
+    //            memset(m_pTempBig1, 0, MAX_IMG_SIZE);
+    //            long iDestSize = MAX_IMG_SIZE;
 
-                memset(chLog, 0, sizeof(chLog));
-                MY_SPRINTF(chLog, "LastSnapshot 开始字符叠加， text = %s", chOverlayInfo);
-                WriteLog(chLog);
-                bool bOverlay = Tool_OverlayStringToImg(&m_CameraResult->CIMG_LastSnapshot.pbImgData, m_CameraResult->CIMG_LastSnapshot.dwImgSize,
-                    &m_pTempBig1, iDestSize,
-                    wstrOverlayIno.c_str(), 32,
-                    10, 10, 255, 255, 255,
-                    50);
-                if (bOverlay)
-                {
-                    memset(chLog, 0, sizeof(chLog));
-                    MY_SPRINTF(chLog, "字符叠加成功, size = %ld, begin copy..", iDestSize);
-                    WriteLog(chLog);
+    //            memset(chLog, 0, sizeof(chLog));
+    //            MY_SPRINTF(chLog, "LastSnapshot 开始字符叠加， text = %s", chOverlayInfo);
+    //            WriteLog(chLog);
+    //            bool bOverlay = Tool_OverlayStringToImg(&m_CameraResult->CIMG_LastSnapshot.pbImgData, m_CameraResult->CIMG_LastSnapshot.dwImgSize,
+    //                &m_pTempBig1, iDestSize,
+    //                wstrOverlayIno.c_str(), 32,
+    //                10, 10, 255, 255, 255,
+    //                50);
+    //            if (bOverlay)
+    //            {
+    //                memset(chLog, 0, sizeof(chLog));
+    //                MY_SPRINTF(chLog, "字符叠加成功, size = %ld, begin copy..", iDestSize);
+    //                WriteLog(chLog);
 
-                    delete[] m_CameraResult->CIMG_LastSnapshot.pbImgData;
-                    m_CameraResult->CIMG_LastSnapshot.pbImgData = new BYTE[iDestSize];
-                    memcpy(m_CameraResult->CIMG_LastSnapshot.pbImgData, m_pTempBig1, iDestSize);
-                    m_CameraResult->CIMG_LastSnapshot.dwImgSize = iDestSize;
+    //                delete[] m_CameraResult->CIMG_LastSnapshot.pbImgData;
+    //                m_CameraResult->CIMG_LastSnapshot.pbImgData = new BYTE[iDestSize];
+    //                memcpy(m_CameraResult->CIMG_LastSnapshot.pbImgData, m_pTempBig1, iDestSize);
+    //                m_CameraResult->CIMG_LastSnapshot.dwImgSize = iDestSize;
 
-                    WriteLog("finish copy.");
-                }
-                else
-                {
-                    WriteLog("字符叠加失败,使用原图数据.");
-                }
-            }
-        }
-    }
+    //                WriteLog("finish copy.");
+    //            }
+    //            else
+    //            {
+    //                WriteLog("字符叠加失败,使用原图数据.");
+    //            }
+    //        }
+    //    }
+    //}
 
     if (m_bSaveToBuffer)
     {
         SaveResultToBufferPath(m_CameraResult);
     }
 
-    if (m_bCompress)
-    {
-        WriteLog("开始压缩车牌小图.");
-        CompressImg(m_CameraResult->CIMG_PlateImage, m_iCompressSamllImgSize);
-        WriteLog("开始压缩最清晰大图.");
-        CompressImg(m_CameraResult->CIMG_BestSnapshot, m_iCompressBigImgSize);
-        WriteLog("开始压缩最后大图.");
-        CompressImg(m_CameraResult->CIMG_LastSnapshot, m_iCompressBigImgSize);
-        WriteLog("全部压缩结束.");
-    }
+    //if (m_bCompress)
+    //{
+    //    WriteLog("开始压缩车牌小图.");
+    //    CompressImg(m_CameraResult->CIMG_PlateImage, m_iCompressSamllImgSize);
+    //    WriteLog("开始压缩最清晰大图.");
+    //    CompressImg(m_CameraResult->CIMG_BestSnapshot, m_iCompressBigImgSize);
+    //    WriteLog("开始压缩最后大图.");
+    //    CompressImg(m_CameraResult->CIMG_LastSnapshot, m_iCompressBigImgSize);
+    //    WriteLog("全部压缩结束.");
+    //}
 
     EnterCriticalSection(&m_csResult);
     if (NULL != m_BufferResult)
@@ -870,7 +870,11 @@ int Camera6467_plate::RecordInfoEnd(DWORD dwCarID)
     return 0;
 }
 
-int Camera6467_plate::RecordInfoPlate(DWORD dwCarID, LPCSTR pcPlateNo, LPCSTR pcAppendInfo, DWORD dwRecordType, DWORD64 dw64TimeMS)
+int Camera6467_plate::RecordInfoPlate(DWORD dwCarID, 
+    LPCSTR pcPlateNo, 
+    LPCSTR pcAppendInfo, 
+    DWORD dwRecordType,
+    DWORD64 dw64TimeMS)
 {
     SetResultComplete(false);
 
@@ -953,7 +957,14 @@ int Camera6467_plate::RecordInfoPlate(DWORD dwCarID, LPCSTR pcPlateNo, LPCSTR pc
     return 0;
 }
 
-int Camera6467_plate::RecordInfoBigImage(DWORD dwCarID, WORD wImgType, WORD wWidth, WORD wHeight, PBYTE pbPicData, DWORD dwImgDataLen, DWORD dwRecordType, DWORD64 dw64TimeMS)
+int Camera6467_plate::RecordInfoBigImage(DWORD dwCarID, 
+    WORD wImgType, 
+    WORD wWidth,
+    WORD wHeight, 
+    PBYTE pbPicData,
+    DWORD dwImgDataLen,
+    DWORD dwRecordType,
+    DWORD64 dw64TimeMS)
 {
     SetResultComplete(false);
 
@@ -962,7 +973,13 @@ int Camera6467_plate::RecordInfoBigImage(DWORD dwCarID, WORD wImgType, WORD wWid
         return -1;
     }
     char chlogInfo[260] = { 0 };
-    sprintf_s(chlogInfo, "RecordInfoBigImage -begin- dwCarID = %ld, dwRecordType = %#x， ImgType=%d, size = %ld", dwCarID, dwRecordType, wImgType, dwImgDataLen);
+    sprintf_s(chlogInfo, "RecordInfoBigImage -begin- dwCarID = %ld, dwRecordType = %#x， ImgType=%d, size = %ld, width = %u, wHeight= %u", 
+        dwCarID,
+        dwRecordType, 
+        wImgType, 
+        dwImgDataLen,
+        wWidth,
+        wHeight);
     WriteLog(chlogInfo);
     if (dwCarID == m_dwLastCarID)
     {
@@ -1013,7 +1030,13 @@ int Camera6467_plate::RecordInfoBigImage(DWORD dwCarID, WORD wImgType, WORD wWid
     return 0;
 }
 
-int Camera6467_plate::RecordInfoSmallImage(DWORD dwCarID, WORD wWidth, WORD wHeight, PBYTE pbPicData, DWORD dwImgDataLen, DWORD dwRecordType, DWORD64 dw64TimeMS)
+int Camera6467_plate::RecordInfoSmallImage(DWORD dwCarID, 
+    WORD wWidth, 
+    WORD wHeight, 
+    PBYTE pbPicData, 
+    DWORD dwImgDataLen,
+    DWORD dwRecordType, 
+    DWORD64 dw64TimeMS)
 {
     SetResultComplete(false);
     if (NULL == m_CameraResult)
@@ -1021,7 +1044,7 @@ int Camera6467_plate::RecordInfoSmallImage(DWORD dwCarID, WORD wWidth, WORD wHei
         return -1;
     }
     char chlogInfo[260] = { 0 };
-    sprintf_s(chlogInfo, "RecordInfoSmallImage  -begin- dwCarID = %d", dwCarID);
+    sprintf_s(chlogInfo, "RecordInfoSmallImage  -begin- dwCarID = %d, wWidth= %u, wHeight = %u", dwCarID, wWidth, wHeight);
     WriteLog(chlogInfo);
     if (dwCarID == m_dwLastCarID)
     {
@@ -1100,7 +1123,13 @@ int Camera6467_plate::RecordInfoSmallImage(DWORD dwCarID, WORD wWidth, WORD wHei
     return 0;
 }
 
-int Camera6467_plate::RecordInfoBinaryImage(DWORD dwCarID, WORD wWidth, WORD wHeight, PBYTE pbPicData, DWORD dwImgDataLen, DWORD dwRecordType, DWORD64 dw64TimeMS)
+int Camera6467_plate::RecordInfoBinaryImage(DWORD dwCarID,
+    WORD wWidth, 
+    WORD wHeight, 
+    PBYTE pbPicData, 
+    DWORD dwImgDataLen,
+    DWORD dwRecordType,
+    DWORD64 dw64TimeMS)
 {
     SetResultComplete(false);
 
@@ -1180,7 +1209,10 @@ int Camera6467_plate::RecordInfoBinaryImage(DWORD dwCarID, WORD wWidth, WORD wHe
     return 0;
 }
 
-int Camera6467_plate::DeviceJPEGStream(PBYTE pbImageData, DWORD dwImageDataLen, DWORD dwImageType, LPCSTR szImageExtInfo)
+int Camera6467_plate::DeviceJPEGStream(PBYTE pbImageData, 
+    DWORD dwImageDataLen, 
+    DWORD dwImageType, 
+    LPCSTR szImageExtInfo)
 {
     static int iCout = 0;
     if (iCout++ > 100)
@@ -1427,7 +1459,7 @@ bool Camera6467_plate::GetOneImgFromVideo(int format, PBYTE dataBuffer, int* buf
             return false;
         }
         int iImgBufferSize = MAX_IMG_SIZE;
-        int iImgWidth = 1920, iImgHeight = 1080;
+        int iImgWidth = 800, iImgHeight = 600;
         if (H264_GetOneBmpImg((HANDLE)m_hVideo, m_pVideoImgBuffer, iImgBufferSize, iImgWidth, iImgHeight))
         {
             memset(chLog, 0, sizeof(chLog));
@@ -1488,6 +1520,24 @@ bool Camera6467_plate::GetOneImgFromVideo(int format, PBYTE dataBuffer, int* buf
         WriteLog("GetOneImgFromVideo, the buffer space is apply failed.");
         return false;
     }
+}
+
+bool Camera6467_plate::GetIfOverlay()
+{
+    bool bValue = false;
+    EnterCriticalSection(&m_csResult);
+    bValue = m_bOverlay;
+    LeaveCriticalSection(&m_csResult);
+    return bValue;
+}
+
+bool Camera6467_plate::GetIfCompress()
+{
+    bool bValue = false;
+    EnterCriticalSection(&m_csResult);
+    bValue = m_bCompress;
+    LeaveCriticalSection(&m_csResult);
+    return bValue;
 }
 
 void Camera6467_plate::SetResultComplete(bool bfinish)

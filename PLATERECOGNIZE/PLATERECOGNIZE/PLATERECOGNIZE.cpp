@@ -21,13 +21,18 @@ std::string g_strLastpicID;
 std::string g_strOverlayInfo;
 std::wstring g_overlayText;
 
+extern CRITICAL_SECTION g_csDLL;
+
 bool CheckCamerIsValid()
 {
+    //EnterCriticalSection(&g_csDLL);
     if (g_pCamera == nullptr)
     {
+        //LeaveCriticalSection(&g_csDLL);
         g_WriteLog("The camera is not ready, please init device first.");
         return false;
     }
+    //LeaveCriticalSection(&g_csDLL);
     return true;
 }
 
@@ -76,6 +81,7 @@ uint8_t* GetImgBufferAddress3()
 
 std::shared_ptr<CameraResult> g_GetResult(const char* PicId)
 {
+    //EnterCriticalSection(&g_csDLL);
     char szLog[256] = {0};
     std::string strCurrentPicId(PicId);
     if (g_strLastpicID.empty() || 0 != g_strLastpicID.compare(strCurrentPicId) || g_pLastResult == nullptr)
@@ -89,6 +95,7 @@ std::shared_ptr<CameraResult> g_GetResult(const char* PicId)
     {
         sprintf_s(szLog, "current PicId= %d is same with last PicId = %s, get the last one result from buffer.", strCurrentPicId.c_str(), g_strLastpicID.c_str());
     }
+    //LeaveCriticalSection(&g_csDLL);
     g_WriteLog(szLog);
     return g_pLastResult;
 }
@@ -102,6 +109,7 @@ std::shared_ptr<CameraResult> g_GetResult(const char* PicId)
 int g_iVideoWidth = 0, g_iVideoHeight = 0;
 int g_iTimePosX = 1500, g_iTimePosY = 1000;
 char g_szOverlayInfo[512] = {0};
+
 
 
 PLATERECOGNIZE_API BOOL WINAPI Plate_InitDevice(HWND hHandle, int Msg, int PorType, char * PortName, long Baudrate, char * Px)
@@ -140,6 +148,7 @@ PLATERECOGNIZE_API BOOL WINAPI Plate_InitDevice(HWND hHandle, int Msg, int PorTy
     //iValue = atoi(chValue);
     //g_iTimePosY = (iValue > 1000) ? iValue : g_iTimePosY;
 
+    EnterCriticalSection(&g_csDLL);
     BOOL bRet = FALSE;
     if (g_pCamera == nullptr)
     {
@@ -166,6 +175,7 @@ PLATERECOGNIZE_API BOOL WINAPI Plate_InitDevice(HWND hHandle, int Msg, int PorTy
             g_WriteLog("The camera is already exist,but the ip address is same with the old one, use it.");
         }
     }
+    
 
     if (g_pCamera != nullptr)
     {
@@ -176,17 +186,20 @@ PLATERECOGNIZE_API BOOL WINAPI Plate_InitDevice(HWND hHandle, int Msg, int PorTy
     {
         g_WriteLog("Plate_InitDevice, finish return false.");
     }    
+    LeaveCriticalSection(&g_csDLL);
     return  (bRet) ? TRUE : FALSE;
 }
 
 PLATERECOGNIZE_API BOOL WINAPI Plate_CloseDevice()
 {
     g_WriteLog("Plate_CloseDevice, begin.");
+    EnterCriticalSection(&g_csDLL);
     if (g_pCamera)
     {
         g_pCamera->StopPlayVideo();
     }
     g_pCamera = nullptr;
+    LeaveCriticalSection(&g_csDLL);
     g_WriteLog("Plate_CloseDevice, finish.");
     return TRUE;
 }
@@ -196,6 +209,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetInfo(char * PlateInfor, int 
     char chLog[256] = { 0 };
     sprintf_s(chLog, sizeof(chLog), "Plate_GetInfo, begin, PlateInfor = %p, ColorInfo = %p, PicId = %s.",    PlateInfor,  ColorInfo,   PicId);
     g_WriteLog(chLog);
+    EnterCriticalSection(&g_csDLL);
 
     bool bRet = FALSE;
     if (CheckCamerIsValid())
@@ -223,6 +237,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetInfo(char * PlateInfor, int 
         }
     }
 
+    LeaveCriticalSection(&g_csDLL);
     memset(chLog, 0, sizeof(chLog));
     sprintf_s(chLog, sizeof(chLog), "Plate_GetInfo, end, PlateInfor = %s, ColorInfo = %d, PicId = %s.", PlateInfor, ColorInfo, PicId);
     g_WriteLog(chLog);
@@ -238,6 +253,8 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
         PicId, \
         Overlay);
     g_WriteLog(chLog);
+
+    EnterCriticalSection(&g_csDLL);
 
     g_strOverlayInfo = std::string(Overlay);
 
@@ -281,7 +298,8 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
                 break;
             }
 
-            if (ImageType == COLOR_VEHICLE_HEAD_IMG || ImageType == FULL_IMG)
+            if (ImageType == COLOR_VEHICLE_HEAD_IMG 
+                || ImageType == FULL_IMG)
             {
                 std::wstring wstrOverlayInfo = Img_string2wstring(Overlay);
                 g_overlayText = wstrOverlayInfo;
@@ -309,10 +327,17 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
                 uint8_t* pBuf = pBmpBuffer1;
                 size_t  iBufSize = MAX_IMG_SIZE;
                 //叠加第一行 地点信息
-                int iRet = DrawHeadStyleString(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, 32, (int)rectfOut.Height);
-                memset(chLog, 0, sizeof(chLog));
-                sprintf_s(chLog, sizeof(chLog), "Draw HeadString 1, return code = %d", iRet);
-                g_WriteLog(chLog);
+                int iRet = -1;
+                //EnterCriticalSection(&g_csDLL);
+                if (g_pCamera->GetIfOverlay())
+                {
+                    iRet = DrawHeadStyleString(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, 32, (int)rectfOut.Height);
+                    memset(chLog, 0, sizeof(chLog));
+                    sprintf_s(chLog, sizeof(chLog), "Draw HeadString 1, return code = %d", iRet);
+                    g_WriteLog(chLog);
+                }             
+                //LeaveCriticalSection(&g_csDLL);
+
                 if (iRet == 0)
                 {
                     pData = pBuf;
@@ -336,10 +361,16 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
                 memset(&rectfOut, 0, sizeof(rectfOut));
                 Tool_CalculateStringWithAndHeight(szOverlayInfo, iWidth, iHeight, 32, L"黑体", rectfOut);
 
-                iRet = DrawHeadStyleString(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, iWidth - rectfOut.Width - 32, (int)rectfOut.Height);
-                memset(chLog, 0, sizeof(chLog));
-                sprintf_s(chLog, sizeof(chLog), "Draw HeadString 2, return code = %d", iRet);
-                g_WriteLog(chLog);
+                //EnterCriticalSection(&g_csDLL);
+                if (g_pCamera->GetIfOverlay())
+                {
+                    iRet = DrawHeadStyleString(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, iWidth - rectfOut.Width - 32, (int)rectfOut.Height);
+                    memset(chLog, 0, sizeof(chLog));
+                    sprintf_s(chLog, sizeof(chLog), "Draw HeadString 2, return code = %d", iRet);
+                    g_WriteLog(chLog);
+                }
+               // LeaveCriticalSection(&g_csDLL);
+
                 if (iRet == 0)
                 {
                     pData = pBuf;
@@ -371,10 +402,16 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
                 //    Result->chPlateNO);
                 //iRet = DrawEnd1String(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, 0, -2);
                 sprintf_s(szOverlayInfo, sizeof(szOverlayInfo), "%s%s", Result->chPlateColor, Result->chPlateNO);
-                iRet = DrawEnd1String(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, 32, iHeight - 2 * 32);
-                memset(chLog, 0, sizeof(chLog));
-                sprintf_s(chLog, sizeof(chLog), "Draw End1 String, return code = %d", iRet);
-                g_WriteLog(chLog);
+               // EnterCriticalSection(&g_csDLL);
+                if (g_pCamera->GetIfOverlay())
+                {
+                    iRet = DrawEnd1String(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, 32, iHeight - 2 * 32);
+                    memset(chLog, 0, sizeof(chLog));
+                    sprintf_s(chLog, sizeof(chLog), "Draw End1 String, return code = %d", iRet);
+                    g_WriteLog(chLog);
+                }
+                //LeaveCriticalSection(&g_csDLL);
+
                 if (iRet == 0)
                 {
                     pData = pBuf;
@@ -412,10 +449,15 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
                     memcpy(szOverlayInfo+1, Overlay, sizeof(szOverlayInfo));
                     szOverlayInfo[sizeof(szOverlayInfo) -1] = '\0';
                 }                
-                iRet = DrawEnd2String(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, 0, -2);
-                memset(chLog, 0, sizeof(chLog));
-                sprintf_s(chLog, sizeof(chLog), "Draw End1 String, return code = %d", iRet);
-                g_WriteLog(chLog);
+               // EnterCriticalSection(&g_csDLL);
+                if (g_pCamera->GetIfOverlay())
+                {
+                    iRet = DrawEnd2String(pData, iDataLength, pBuf, iBufSize, szOverlayInfo, 0, -2);
+                    memset(chLog, 0, sizeof(chLog));
+                    sprintf_s(chLog, sizeof(chLog), "Draw End1 String, return code = %d", iRet);
+                    g_WriteLog(chLog);
+                }
+                //LeaveCriticalSection(&g_csDLL);
                 if (iRet == 0)
                 {
                     pData = pBuf;
@@ -438,36 +480,64 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
                     iBufSize = MAX_IMG_SIZE;
                 } 
                 //iRet = DrawStringToImg(dataStruct, oInfo, pBmpBuffer, iDestBufSize);
-                if (iRet == 0)
-                {
-                    g_WriteLog("DrawStringToImg success.");                    
-                    uint8_t* pJPGBuffer = (pData == pBmpBuffer1) ? pBmpBuffer2 : pBmpBuffer1;
-                    memset(pJPGBuffer, 0, MAX_IMG_SIZE);
-                    size_t iJpgBufSize = MAX_IMG_SIZE;                    
+                //if (iRet == 0)
+                //{
+                //    g_WriteLog("DrawStringToImg success.");                    
+                //    uint8_t* pJPGBuffer = (pData == pBmpBuffer1) ? pBmpBuffer2 : pBmpBuffer1;
+                //    memset(pJPGBuffer, 0, MAX_IMG_SIZE);
+                //    size_t iJpgBufSize = MAX_IMG_SIZE;                    
 
+                //    INT iWishSize = 150 * 1024;
+                //    iWidth = (iWidth > COMPRESS_300W_WIDTH) ? COMPRESS_300W_WIDTH : COMPRESS_200W_WIDTH;
+                //    iHeight = (iHeight > COMPRESS_300W_HEIGHT) ? COMPRESS_300W_HEIGHT : COMPRESS_200W_HEIGHT;
+                //    if (g_pCamera->GetIfCompress()
+                //        &&Tool_Img_compress((uint8_t*)pData, iDataLength, pJPGBuffer, &iJpgBufSize, iWidth, iHeight, iWishSize))
+                //    {
+                //        g_WriteLog("compress image success.");
+                //        bRet = Tool_SaveFileToDisk(ImageInfo, pJPGBuffer, iJpgBufSize);
+                //    }
+                //    else
+                //    {
+                //        g_WriteLog("compress image failed, use orig image.");
+                //        bRet = Tool_SaveFileToDisk(ImageInfo, pData, iDataLength);
+                //    }
+                //    pJPGBuffer = NULL;
+                //}
+                //else
+                //{
+                //    memset(chLog, 0, sizeof(chLog));
+                //    //sprintf_s(chLog, sizeof(chLog), "DrawStringToImg failed, error code= %d ,need buffer size = %ld, use default.", iRet, iDestBufSize);
+                //    sprintf_s(chLog, sizeof(chLog), "DrawStringToImg failed, error code= %d , use default.", iRet);
+                //    g_WriteLog(chLog);
+                //    bRet = Tool_SaveFileToDisk(ImageInfo, pData, iDataLength);
+                //}
+
+                //EnterCriticalSection(&g_csDLL);
+                if (g_pCamera->GetIfCompress())
+                {
+                    //LeaveCriticalSection(&g_csDLL);
                     INT iWishSize = 150 * 1024;
                     iWidth = (iWidth > COMPRESS_300W_WIDTH) ? COMPRESS_300W_WIDTH : COMPRESS_200W_WIDTH;
                     iHeight = (iHeight > COMPRESS_300W_HEIGHT) ? COMPRESS_300W_HEIGHT : COMPRESS_200W_HEIGHT;
-                    if (Tool_Img_compress((uint8_t*)pData, iDataLength, pJPGBuffer, &iJpgBufSize, iWidth, iHeight, iWishSize))
+                    if (Tool_Img_compress((uint8_t*)pData, iDataLength, pBuf, &iBufSize, iWidth, iHeight, iWishSize))
                     {
                         g_WriteLog("compress image success.");
-                        bRet = Tool_SaveFileToDisk(ImageInfo, pJPGBuffer, iJpgBufSize);
+                        pData = pBuf;
+                        iDataLength = iBufSize;
                     }
                     else
                     {
                         g_WriteLog("compress image failed, use orig image.");
-                        bRet = Tool_SaveFileToDisk(ImageInfo, pData, iDataLength);
+                        memset(pBuf, 0, MAX_IMG_SIZE);
+                        iBufSize = MAX_IMG_SIZE;
                     }
-                    pJPGBuffer = NULL;
                 }
                 else
                 {
-                    memset(chLog, 0, sizeof(chLog));
-                    //sprintf_s(chLog, sizeof(chLog), "DrawStringToImg failed, error code= %d ,need buffer size = %ld, use default.", iRet, iDestBufSize);
-                    sprintf_s(chLog, sizeof(chLog), "DrawStringToImg failed, error code= %d , use default.", iRet);
-                    g_WriteLog(chLog);
-                    bRet = Tool_SaveFileToDisk(ImageInfo, pData, iDataLength);
+                    //LeaveCriticalSection(&g_csDLL);
                 }
+
+                bRet = Tool_SaveFileToDisk(ImageInfo, pData, iDataLength);
             }
             else
             {
@@ -539,6 +609,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
             g_WriteLog("The result is not ready.");
         }
     }
+    LeaveCriticalSection (&g_csDLL);
 
     memset(chLog, 0, sizeof(chLog));
     sprintf_s(chLog, sizeof(chLog), "Plate_GetImage, end");
@@ -552,6 +623,8 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetState(int* State)
     sprintf_s(chLog, sizeof(chLog), "Plate_GetState, begin, State = %p", State);
     g_WriteLog(chLog);
 
+    EnterCriticalSection(&g_csDLL);
+
     bool bRet = false;
     if (CheckCamerIsValid())
     {
@@ -562,6 +635,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetState(int* State)
     {
         *State = 1;
     }
+    EnterCriticalSection(&g_csDLL);
 
     memset(chLog, 0, sizeof(chLog));
     sprintf_s(chLog, sizeof(chLog), "Plate_GetState, end");
@@ -574,12 +648,14 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_Capture()
     char chLog[256] = { 0 };
     sprintf_s(chLog, sizeof(chLog), "Plate_Capture, begin");
     g_WriteLog(chLog);
+    EnterCriticalSection(&g_csDLL);
 
     bool bRet = FALSE;
     if (CheckCamerIsValid())
     {
         bRet = g_pCamera->TakeCapture();
     }
+    LeaveCriticalSection(&g_csDLL);
 
     memset(chLog, 0, sizeof(chLog));
     if (bRet)
@@ -591,6 +667,8 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_Capture()
         sprintf_s(chLog, sizeof(chLog), "Plate_Capture, end, TakeCapture failed.");
     }
     g_WriteLog(chLog);
+
+    
     return  ( bRet ) ? TRUE : FALSE;
 }
 
@@ -599,6 +677,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_InitVideo(HWND hHandle, char * 
     char chLog[256] = { 0 };
     sprintf_s(chLog, sizeof(chLog), "Plate_InitVideo, begin, hHandle= %d, ErrInfo= %p", hHandle, ErrInfo);
     g_WriteLog(chLog);
+    EnterCriticalSection(&g_csDLL);
 
     bool bRet = FALSE;
     char szErrInfo[128] = { 0 };
@@ -621,6 +700,8 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_InitVideo(HWND hHandle, char * 
     }
     memcpy(ErrInfo, szErrInfo, strlen(szErrInfo));
 
+    LeaveCriticalSection(&g_csDLL);
+
     memset(chLog, 0, sizeof(chLog));
     sprintf_s(chLog, sizeof(chLog), "Plate_InitVideo, end, ErrInfo = %s", ErrInfo);
     g_WriteLog(chLog);
@@ -632,7 +713,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_CloseVideo(HWND hHandle)
     char chLog[256] = { 0 };
     sprintf_s(chLog, sizeof(chLog), "Plate_CloseVideo, begin, hHandle= %d", hHandle);
     g_WriteLog(chLog);
-
+    EnterCriticalSection(&g_csDLL);
     bool bRet = FALSE;
     if (CheckCamerIsValid())
     {
@@ -640,6 +721,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_CloseVideo(HWND hHandle)
         bRet = true;
         g_WriteLog("StopPlayVideo succeed.");
     }
+    LeaveCriticalSection(&g_csDLL);
 
     memset(chLog, 0, sizeof(chLog));
     sprintf_s(chLog, sizeof(chLog), "Plate_CloseVideo, end");
@@ -653,12 +735,14 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_Screenshot(char * ImageInfo)
     sprintf_s(chLog, sizeof(chLog), "Plate_Screenshot, begin, ImageInfo= %s", ImageInfo);
     g_WriteLog(chLog);
 
+    EnterCriticalSection(&g_csDLL);
+
     bool bRet = FALSE;
     if (CheckCamerIsValid())
     {
-        int iBufferSize = COMPRESS_IMG_SIZE;
+        int iBufferSize = g_pCamera->GetIfCompress() ? COMPRESS_IMG_SIZE : MAX_IMG_SIZE;
         uint8_t* pBuffer = GetImgBufferAddress();
-        bRet = g_pCamera->GetOneImgFromVideo(1, pBuffer, &iBufferSize);
+        bRet = g_pCamera->GetOneImgFromVideo(g_pCamera->GetIfCompress(), pBuffer, &iBufferSize);
         if (!bRet)
         {
             g_WriteLog("GetOneImgFromVideo failed.");
@@ -667,8 +751,9 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_Screenshot(char * ImageInfo)
         {
             memset(chLog, 0, sizeof(chLog));
             sprintf_s(chLog, sizeof(chLog), "GetOneImgFromVideo, succeed, image length = %d", iBufferSize);
-            g_WriteLog("GetOneImgFromVideo succeed.");
-            if (g_overlayText.length() > 0)
+            g_WriteLog(chLog);
+            if (g_overlayText.length() > 0
+                && g_pCamera->GetIfOverlay())
             {
                 //ImgDataStruct dataStruct;
                 //dataStruct.srcImgData = pBuffer;
@@ -722,7 +807,11 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_Screenshot(char * ImageInfo)
             }
             else
             {
-                g_WriteLog("Overlay info is less than 0,  use orig image.");
+                if (g_pCamera->GetIfOverlay())
+                {
+                    g_WriteLog("Overlay info is less than 0,  use orig image.");
+                }
+                g_WriteLog("save origin image.");
                 bRet = Tool_SaveFileToDisk(ImageInfo, pBuffer, iBufferSize);
             }
             
@@ -733,6 +822,8 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_Screenshot(char * ImageInfo)
         }
         pBuffer = NULL;
     }
+
+    LeaveCriticalSection(&g_csDLL);
 
     memset(chLog, 0, sizeof(chLog));
     sprintf_s(chLog, sizeof(chLog), "Plate_Screenshot, end");
@@ -751,7 +842,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_Timing(char* StandardTime, char
         g_WriteLog("Plate_Timing, StandardTime or ReturnTime is invalid, return false. ");
         return FALSE;
     }
-
+    EnterCriticalSection(&g_csDLL);
     bool bRet = false;
     if (CheckCamerIsValid())
     {
@@ -810,6 +901,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_Timing(char* StandardTime, char
             g_WriteLog("get device time failed.");
         }
     }
+    LeaveCriticalSection(&g_csDLL);
 
     memset(chLog, 0, sizeof(chLog));
     sprintf_s(chLog, sizeof(chLog), "Plate_Timing, end, ReturnTime = %s", ReturnTime);
@@ -822,7 +914,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_ShowTime()
     char chLog[256] = { 0 };
     sprintf_s(chLog, sizeof(chLog), "Plate_ShowTime, begin");
     g_WriteLog(chLog);
-
+    EnterCriticalSection(&g_csDLL);
     bool bRet = false;
     if (CheckCamerIsValid())
     {
@@ -838,7 +930,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_ShowTime()
             g_WriteLog("show video time failed.");
         }
     }
-
+    LeaveCriticalSection(&g_csDLL);
     memset(chLog, 0, sizeof(chLog));
     sprintf_s(chLog, sizeof(chLog), "Plate_ShowTime, end.");
     g_WriteLog(chLog);
@@ -850,7 +942,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_CloseTime()
     char chLog[256] = { 0 };
     sprintf_s(chLog, sizeof(chLog), "Plate_CloseTime, begin");
     g_WriteLog(chLog);
-
+    EnterCriticalSection(&g_csDLL);
     bool bRet = false;
     if (CheckCamerIsValid())
     {
@@ -864,7 +956,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_CloseTime()
             g_WriteLog("close video time failed.");
         }
     }
-
+    LeaveCriticalSection(&g_csDLL);
     memset(chLog, 0, sizeof(chLog));
     sprintf_s(chLog, sizeof(chLog), "Plate_CloseTime, end.");
     g_WriteLog(chLog);
@@ -876,7 +968,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetDeviceInfo(char * PlateInfo)
     char chLog[256] = { 0 };
     sprintf_s(chLog, sizeof(chLog), "Plate_GetDeviceInfo, begin, PlateInfo = %p", PlateInfo);
     g_WriteLog(chLog);
-
+    EnterCriticalSection(&g_csDLL);
     bool bRet = false;
     if (CheckCamerIsValid())
     {
@@ -927,6 +1019,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetDeviceInfo(char * PlateInfo)
             bRet = true;
         }
     }
+    LeaveCriticalSection(&g_csDLL);
 
     memset(chLog, 0, sizeof(chLog));
     sprintf_s(chLog, sizeof(chLog), "Plate_GetDeviceInfo, end, PlateInfo = %s.", PlateInfo);

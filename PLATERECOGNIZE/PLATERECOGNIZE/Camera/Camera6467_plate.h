@@ -28,6 +28,9 @@ public:
     void SetExitStatusVideo();
     bool GetOneImgFromVideo(int format, PBYTE dataBuffer, int* bufferLenght);
 
+    bool GetIfOverlay();
+    bool GetIfCompress();
+
 private:
     void AnalysisAppendInfo(CameraResult* CamResult);
     void ReadConfig() override;

@@ -887,18 +887,18 @@ bool Tool_SaveFileToDisk(char* chImgPath, void* pImgData, DWORD dwImgSize)
         if (fp)
         {
             //iWritedSpecialSize = fwrite(pImgData, dwImgSize , 1, fp);
-            iWritedSpecialSize = fwrite(pImgData, 1, dwImgSize, fp);
+            iWritedSpecialSize = fwrite(pImgData, dwImgSize, 1, fp);
             fclose(fp);
             fp = NULL;
             bRet = true;
         }
-        if (iWritedSpecialSize == dwImgSize)
-        {
-            char chLogBuff[MAX_PATH] = { 0 };
-            //sprintf_s(chLogBuff, "%s save success", chImgPath);
-            sprintf_s(chLogBuff, "%s save success", chImgPath);
-            printf(chLogBuff);
-        }
+        //if (iWritedSpecialSize == dwImgSize)
+        //{
+        //    char chLogBuff[MAX_PATH] = { 0 };
+        //    //sprintf_s(chLogBuff, "%s save success", chImgPath);
+        //    sprintf_s(chLogBuff, "%s save success", chImgPath);
+        //    printf(chLogBuff);
+        //}
     }
     else
     {
