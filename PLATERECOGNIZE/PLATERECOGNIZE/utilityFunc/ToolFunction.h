@@ -1,6 +1,7 @@
 #include "tinyxml/tinyxml.h"
 #include "tinyxml/tinystr.h"
 #include <string>
+#include <list>
 
 //#define MY_SPRINTF sprintf_s
 
@@ -150,6 +151,8 @@ std::string GetSoftVersion(const char* exepath);
 #endif
 
 int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInfo, void* destImgBuffer, size_t& destBufferSize);
+
+int DrawStringToImgEx(const ImgDataStruct dataStruct, const OverlayInfo* overlayInfo, int overlayCount, void* destImgBuffer, size_t& destBufferSize);
 
 //************************************
 // Method:        Tool_RgbBin2ByteBin

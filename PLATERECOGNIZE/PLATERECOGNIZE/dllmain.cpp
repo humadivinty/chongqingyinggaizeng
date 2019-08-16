@@ -177,8 +177,18 @@ void g_WriteLog(const char* chLog)
     fopen_s(&file, chLogFileName, "a+");
     if (file)
     {
-        fprintf(file, "%04d-%02d-%02d %02d:%02d:%02d:%03d [Thread id:%lu] [Version:%s]: %s\n", pTM.tm_year + 1900, pTM.tm_mon + 1, pTM.tm_mday,
-            pTM.tm_hour, pTM.tm_min, pTM.tm_sec, dwMS, GetCurrentThreadId(),DLL_VERSION, chLog);
+        fprintf(file, "%04d-%02d-%02d %02d:%02d:%02d:%03d [Thread id:%lu] [processID: %lu ] [Version:%s]: %s\n", 
+            pTM.tm_year + 1900,
+            pTM.tm_mon + 1, 
+            pTM.tm_mday,
+            pTM.tm_hour, 
+            pTM.tm_min,
+            pTM.tm_sec, 
+            dwMS, 
+            GetCurrentThreadId(),
+            GetCurrentProcessId(),
+            DLL_VERSION, 
+            chLog);
         fclose(file);
         file = NULL;
     }

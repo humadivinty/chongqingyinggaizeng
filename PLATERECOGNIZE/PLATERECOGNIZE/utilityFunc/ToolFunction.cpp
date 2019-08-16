@@ -12,6 +12,16 @@ using namespace Gdiplus;
 #pragma comment(lib, "version.lib")  
 #endif
 
+#define SAFE_DELETE_OBJ(obj) \
+{   \
+    if (obj != NULL)    \
+    {   \
+        delete obj; \
+        obj = NULL; \
+    }   \
+}
+
+
 TiXmlElement SelectElementByName(const char* InputInfo, char* pName, int iXMLType)
 {
 	//注：XMLTYPE 为1时，InputInfo为XML路径，当为2时,InputInfo为二进制文件内容
@@ -1231,6 +1241,351 @@ int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInf
         destBufferSize = ulRealSize;
         iRet = 0;
     }
+
+    // 释放内存
+    if (pStreamOut != NULL)
+    {
+        pStreamOut->Release();
+        pStreamOut = NULL;
+    }
+
+    if (pStreamSrc != NULL)
+    {
+        pStreamSrc->Release();
+        pStreamSrc = NULL;
+    }
+
+    return iRet;
+}
+
+int DrawStringToImgEx(const ImgDataStruct dataStruct, const OverlayInfo* pOverlayInfo, int overlayCount, void* destImgBuffer, size_t& destBufferSize)
+{
+#define POS_UP_TO_IMG (-1)
+#define POS_DOWN_TO_IMG (-2)
+
+#define STYLE_ONLY_FONT_BACKGROUND (1)
+#define STYLE_WHOLE_LINE (2)
+
+    if (!dataStruct.srcImgData
+        || dataStruct.srcImgDataLengh <= 0
+        || !destImgBuffer 
+        || destBufferSize <= 0
+        || pOverlayInfo == NULL
+        || overlayCount <= 0)
+    {
+        printf("myDrawString, the parameter is invalid, return 1.\n ");
+        return 1;
+    }
+    int iRet = 0;
+
+    UCHAR* pSrcData = dataStruct.srcImgData;
+    long srcLength = dataStruct.srcImgDataLengh;
+
+    // 创建流
+    IStream *pStreamSrc = NULL;
+    // 创建输出流
+    IStream* pStreamOut = NULL;
+    LARGE_INTEGER liTemp = { 0 };
+    ULARGE_INTEGER uLiZero = { 0 };
+
+    HRESULT hr1 = CreateStreamOnHGlobal(NULL, TRUE, &pStreamSrc);
+    HRESULT hr2 = CreateStreamOnHGlobal(NULL, TRUE, &pStreamOut);
+    if (hr1 != S_OK || hr2 != S_OK)
+    {
+        printf("CreateStreamOnHGlobal failed, return 2.\n ");
+        iRet = 2;
+
+        if (pStreamOut != NULL)
+        {
+            pStreamOut->Release();
+            pStreamOut = NULL;
+        }
+
+        if (pStreamSrc != NULL)
+        {
+            pStreamSrc->Release();
+            pStreamSrc = NULL;
+        }
+        return 2;
+    }
+
+    // 初始化流
+    pStreamSrc->Seek(liTemp, STREAM_SEEK_SET, NULL);
+    pStreamSrc->SetSize(uLiZero);
+
+    pStreamOut->Seek(liTemp, STREAM_SEEK_SET, NULL);
+    pStreamOut->SetSize(uLiZero);
+
+    // 将图像放入流中
+    ULONG ulRealSize = 0;
+    if (S_OK != pStreamSrc->Write(pSrcData, srcLength, &ulRealSize))
+    {
+        printf("pStreamSrc failed.\n");
+        iRet = 3;
+
+        if (pStreamOut != NULL)
+        {
+            pStreamOut->Release();
+            pStreamOut = NULL;
+        }
+
+        if (pStreamSrc != NULL)
+        {
+            pStreamSrc->Release();
+            pStreamSrc = NULL;
+        }
+        return 3;
+    }
+
+    CLSID jpgClsid;
+    CLSID bmpClsid;
+    Tool_GetEncoderClsid(L"image/jpeg", &jpgClsid);
+    Tool_GetEncoderClsid(L"image/bmp", &bmpClsid);
+
+    // 从流创建位图
+    Gdiplus::Bitmap* pbmpSrc = Bitmap::FromStream(pStreamSrc);
+    Gdiplus::Bitmap* pbmpDst = NULL;
+    Gdiplus::Status rSata = Gdiplus::Ok;
+    const OverlayInfo* pOverlay = pOverlayInfo;
+    for (int i = 0; i < overlayCount; i++)
+    {
+        if (pbmpDst != NULL)
+        {
+            SAFE_DELETE_OBJ(pbmpSrc);
+            pbmpSrc = pbmpDst->Clone(Rect(0, 0, pbmpDst->GetWidth(), (REAL)pbmpDst->GetHeight()), PixelFormatDontCare);
+            
+            SAFE_DELETE_OBJ(pbmpDst);
+        }
+        int iSrcWidth = pbmpSrc->GetWidth();
+        int iSrcHeight = pbmpSrc->GetHeight();
+
+        
+        Gdiplus::Color fontColor(pOverlay->st_fontColor.iColorAlpha, pOverlay->st_fontColor.iColorR, pOverlay->st_fontColor.iColorG, pOverlay->st_fontColor.iColorB);
+        Gdiplus::SolidBrush  fontBrush(fontColor);
+        Gdiplus::FontFamily  fontFamily(pOverlay->szFontFamily);
+        Gdiplus::Font        font(&fontFamily, (float)(pOverlay->iFontSize), FontStyleRegular, UnitPixel);
+
+        Gdiplus::RectF  rectfOut;
+        {
+            //计算消息主题的高度
+            Gdiplus::Bitmap bgtest(iSrcWidth, iSrcHeight);
+            Gdiplus::Graphics    graphicsTest(&bgtest);
+            Gdiplus::RectF rtGdiplus;//计算消息主题的宽度
+            rtGdiplus.X = (pOverlay->st_FontPosition.iPosX > 0) ? pOverlay->st_FontPosition.iPosX : 0;
+            rtGdiplus.Y = (pOverlay->st_FontPosition.iPosY > 0) ? pOverlay->st_FontPosition.iPosY : 0;
+            rtGdiplus.Width = (float)iSrcWidth;
+            rtGdiplus.Height = -1;
+            graphicsTest.MeasureString(pOverlay->szOverlayString, -1, &font, rtGdiplus, &rectfOut);
+            printf("MeasureString width = %f, height = %f\n", rectfOut.Width, rectfOut.Height);
+        }
+        int iDestWidth = 0.0, iDestHeight = 0.0;
+        if (pOverlay->st_FontPosition.iPosY == POS_UP_TO_IMG   \
+            || pOverlay->st_FontPosition.iPosY == POS_DOWN_TO_IMG
+            )
+        {
+            iDestWidth = iSrcWidth;
+            iDestHeight = (iSrcHeight + rectfOut.Height);
+        }
+        else
+        {
+            iDestWidth = iSrcWidth;
+            iDestHeight = iSrcHeight;
+        }
+        pbmpDst = new Gdiplus::Bitmap(iDestWidth, iDestHeight);
+        Gdiplus::Graphics    graphics(pbmpDst);
+
+        //先画图，再画矩形
+        
+        Gdiplus::Rect destRect;
+        destRect.X = 0;
+        destRect.Y = (pOverlay->st_FontPosition.iPosY == POS_UP_TO_IMG) ? rectfOut.Height : 0;
+        destRect.Width = iSrcWidth;
+        destRect.Height = iSrcHeight;
+        rSata = graphics.DrawImage(pbmpSrc, destRect);
+        if (rSata != Gdiplus::Ok)
+        {
+            printf("draw image failed.\n");
+            iRet = 4;
+
+            SAFE_DELETE_OBJ(pbmpSrc);
+            SAFE_DELETE_OBJ(pbmpDst);
+
+            if (pStreamOut != NULL)
+            {
+                pStreamOut->Release();
+                pStreamOut = NULL;
+            }
+
+            if (pStreamSrc != NULL)
+            {
+                pStreamSrc->Release();
+                pStreamSrc = NULL;
+            }
+            return 4;
+        }
+
+        //绘制矩形填充区
+
+        switch (pOverlay->st_FontPosition.iPosY)
+        {
+        case POS_UP_TO_IMG:        //矩形绘制到图片上方之外
+            destRect.X = 0;
+            destRect.Y = 0;
+            break;
+        case POS_DOWN_TO_IMG:        //矩形绘制到图片下方之外
+            destRect.X = 0;
+            destRect.Y = iSrcHeight;
+            break;
+        default:       //图片之内
+            destRect.X = (pOverlay->st_FontPosition.iPosX >= 0) ? pOverlay->st_FontPosition.iPosX : 0;
+            destRect.Y = (pOverlay->st_FontPosition.iPosY < 0) ? 0 : pOverlay->st_FontPosition.iPosY;
+            break;
+        }
+
+        //矩形宽度决策
+        switch (pOverlay->iStyle)
+        {
+        case STYLE_ONLY_FONT_BACKGROUND:        //
+            destRect.Width = rectfOut.Width;
+            break;
+        case STYLE_WHOLE_LINE:        //矩形绘制到整行        
+            destRect.Width = iSrcWidth;
+            break;
+        default:       //图片之内
+            destRect.Width = iSrcWidth;
+            break;
+        }
+
+        destRect.Height = rectfOut.Height;
+        Gdiplus::SolidBrush myBrush(Gdiplus::Color(pOverlay->st_backgroundColor.iColorAlpha, pOverlay->st_backgroundColor.iColorR, pOverlay->st_backgroundColor.iColorG, pOverlay->st_backgroundColor.iColorB));
+        rSata = graphics.FillRectangle(&myBrush, destRect);  //绘制矩形背景颜色
+        if (rSata != Gdiplus::Ok)
+        {
+            printf("draw Rectangle failed.\n");
+            iRet = 5;
+
+            SAFE_DELETE_OBJ(pbmpSrc);
+            SAFE_DELETE_OBJ(pbmpDst);
+
+            if (pStreamOut != NULL)
+            {
+                pStreamOut->Release();
+                pStreamOut = NULL;
+            }
+
+            if (pStreamSrc != NULL)
+            {
+                pStreamSrc->Release();
+                pStreamSrc = NULL;
+            }
+            return 5;
+        }
+
+        Gdiplus::RectF rectString;
+        rectString.X = pOverlay->st_FontPosition.iPosX;
+        rectString.Y = destRect.Y;
+        rectString.Width = rectfOut.Width;
+        rectString.Height = rectfOut.Height;
+        //#ifdef DEBUG
+        //    graphics.DrawRectangle(&myPen, rectString);
+        //#endif
+
+        rSata = graphics.DrawString(pOverlay->szOverlayString, -1, &font, rectString, NULL, &fontBrush);
+        if (rSata != Gdiplus::Ok)
+        {
+            printf("draw string failed.\n");
+            iRet = 6;
+
+            SAFE_DELETE_OBJ(pbmpSrc);
+            SAFE_DELETE_OBJ(pbmpDst);
+
+            if (pStreamOut != NULL)
+            {
+                pStreamOut->Release();
+                pStreamOut = NULL;
+            }
+
+            if (pStreamSrc != NULL)
+            {
+                pStreamSrc->Release();
+                pStreamSrc = NULL;
+            }
+            return 6;
+        }
+        printf("DrawString status = %d\n", rSata);
+        //pbmpDst->Save(L"./1.bmp", &bmpClsid);
+        pOverlay ++;
+    }    
+
+
+
+    // 将位图按照JPG的格式保存到输出流中
+    //int iQuality = 80 % 100;
+    //EncoderParameters encoderParameters;
+    //encoderParameters.Count = 1;
+    //encoderParameters.Parameter[0].Guid = EncoderQuality;
+    //encoderParameters.Parameter[0].Type = EncoderParameterValueTypeLong;
+    //encoderParameters.Parameter[0].NumberOfValues = 1;
+    //encoderParameters.Parameter[0].Value = &iQuality;
+    //bmpDst.Save(pStreamOut, &jpgClsid, &encoderParameters);
+    rSata = pbmpDst->Save(pStreamOut, &bmpClsid, NULL);
+    if (rSata != Gdiplus::Ok)
+    {
+        printf("save to stream out failed.\n");
+        iRet = 7;
+
+        SAFE_DELETE_OBJ(pbmpSrc);
+        SAFE_DELETE_OBJ(pbmpDst);
+
+        if (pStreamOut != NULL)
+        {
+            pStreamOut->Release();
+            pStreamOut = NULL;
+        }
+
+        if (pStreamSrc != NULL)
+        {
+            pStreamSrc->Release();
+            pStreamSrc = NULL;
+        }
+        return 7;
+    }
+
+    // 获取输出流大小
+    ULARGE_INTEGER libNewPos = { 0 };
+    pStreamOut->Seek(liTemp, STREAM_SEEK_END, &libNewPos);      // 将流指针指向结束位置，从而获取流的大小 
+    if (destBufferSize < (int)libNewPos.LowPart)                     // 用户分配的缓冲区不足
+    {
+        destBufferSize = libNewPos.LowPart;
+        iRet = 8;
+        printf("the buffer size is not enough.\n");
+
+        SAFE_DELETE_OBJ(pbmpSrc);
+        SAFE_DELETE_OBJ(pbmpDst);
+
+        if (pStreamOut != NULL)
+        {
+            pStreamOut->Release();
+            pStreamOut = NULL;
+        }
+
+        if (pStreamSrc != NULL)
+        {
+            pStreamSrc->Release();
+            pStreamSrc = NULL;
+        }
+        return 8;
+    }
+    else
+    {
+        pStreamOut->Seek(liTemp, STREAM_SEEK_SET, NULL);                   // 将流指针指向开始位置
+        pStreamOut->Read(destImgBuffer, libNewPos.LowPart, &ulRealSize);           // 将转换后的JPG图片拷贝给用户
+        destBufferSize = ulRealSize;
+        iRet = 0;
+    }
+
+    SAFE_DELETE_OBJ(pbmpSrc);
+    SAFE_DELETE_OBJ(pbmpDst);
 
     // 释放内存
     if (pStreamOut != NULL)
