@@ -54,8 +54,10 @@ typedef struct tag_PositionInfo
 
 typedef struct _OverlayInfo
 {
-    const WCHAR* szOverlayString;     //需要叠加的字符串
-    const WCHAR* szFontFamily;
+    //const WCHAR* szOverlayString;     //需要叠加的字符串
+    //const WCHAR* szFontFamily;
+    const CHAR* szOverlayString;     //需要叠加的字符串
+    const CHAR* szFontFamily;
     int itextLength;                    //字符串长度
     int iFontSize;                        //叠加字符的大小
     int iStyle;                             //叠加风格: 1时,只在字符背后叠加；2时整行叠加; 默认为2
@@ -65,7 +67,8 @@ typedef struct _OverlayInfo
 
     _OverlayInfo() :
         szOverlayString(NULL),
-        szFontFamily(L"Times New Roman"),
+        //szFontFamily(L"Times New Roman"),
+        szFontFamily("Times New Roman"),
         itextLength(0),
         iFontSize(32),
         iStyle(2)
@@ -153,6 +156,8 @@ std::string GetSoftVersion(const char* exepath);
 int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInfo, void* destImgBuffer, size_t& destBufferSize);
 
 int DrawStringToImgEx(const ImgDataStruct dataStruct, const OverlayInfo* overlayInfo, int overlayCount, void* destImgBuffer, size_t& destBufferSize);
+
+int DrawStringToImgEx_cximage(const ImgDataStruct dataStruct, const OverlayInfo* pOverlayInfo, int overlayCount, void* destImgBuffer, size_t& destBufferSize);
 
 //************************************
 // Method:        Tool_RgbBin2ByteBin

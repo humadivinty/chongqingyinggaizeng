@@ -12,6 +12,8 @@ using namespace Gdiplus;
 #pragma comment(lib, "version.lib")  
 #endif
 
+#include "./libCxImage/ximage.h"
+#pragma  comment(lib, "./libCxImage/cximage.lib")
 #define SAFE_DELETE_OBJ(obj) \
 {   \
     if (obj != NULL)    \
@@ -1035,7 +1037,10 @@ int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInf
 
     Gdiplus::Color fontColor(overlayInfo.st_fontColor.iColorAlpha, overlayInfo.st_fontColor.iColorR, overlayInfo.st_fontColor.iColorG, overlayInfo.st_fontColor.iColorB);
     Gdiplus::SolidBrush  fontBrush(fontColor);
-    Gdiplus::FontFamily  fontFamily(overlayInfo.szFontFamily);
+
+    //Gdiplus::FontFamily  fontFamily(overlayInfo.szFontFamily);
+    Gdiplus::FontFamily  fontFamily(Img_string2wstring(overlayInfo.szFontFamily).c_str());
+
     Gdiplus::Font        font(&fontFamily, (float)(overlayInfo.iFontSize), FontStyleRegular, UnitPixel);
 
     Gdiplus::RectF  rectfOut;
@@ -1048,7 +1053,8 @@ int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInf
         rtGdiplus.Y = (overlayInfo.st_FontPosition.iPosY > 0) ? overlayInfo.st_FontPosition.iPosY : 0;
         rtGdiplus.Width = (float)iSrcWidth;
         rtGdiplus.Height = -1;
-        graphicsTest.MeasureString(overlayInfo.szOverlayString, -1, &font, rtGdiplus, &rectfOut);
+        //graphicsTest.MeasureString(overlayInfo.szOverlayString, -1, &font, rtGdiplus, &rectfOut);
+        graphicsTest.MeasureString(Img_string2wstring(overlayInfo.szOverlayString).c_str(), -1, &font, rtGdiplus, &rectfOut);
         printf("MeasureString width = %f, height = %f\n", rectfOut.Width, rectfOut.Height);
     }
     int iDestWidth = 0.0, iDestHeight = 0.0;
@@ -1157,7 +1163,8 @@ int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInf
 //    graphics.DrawRectangle(&myPen, rectString);
 //#endif
 
-    rSata = graphics.DrawString(overlayInfo.szOverlayString, -1, &font, rectString, NULL, &fontBrush);
+    //rSata = graphics.DrawString(overlayInfo.szOverlayString, -1, &font, rectString, NULL, &fontBrush);
+    rSata = graphics.DrawString(Img_string2wstring(overlayInfo.szOverlayString).c_str(), -1, &font, rectString, NULL, &fontBrush);
     if (rSata != Gdiplus::Ok)
     {
         printf("draw string failed.\n");
@@ -1258,7 +1265,353 @@ int DrawStringToImg(const ImgDataStruct dataStruct, const OverlayInfo overlayInf
     return iRet;
 }
 
-int DrawStringToImgEx(const ImgDataStruct dataStruct, const OverlayInfo* pOverlayInfo, int overlayCount, void* destImgBuffer, size_t& destBufferSize)
+//int DrawStringToImgEx(const ImgDataStruct dataStruct, const OverlayInfo* pOverlayInfo, int overlayCount, void* destImgBuffer, size_t& destBufferSize)
+//{
+//#define POS_UP_TO_IMG (-1)
+//#define POS_DOWN_TO_IMG (-2)
+//
+//#define STYLE_ONLY_FONT_BACKGROUND (1)
+//#define STYLE_WHOLE_LINE (2)
+//
+//    if (!dataStruct.srcImgData
+//        || dataStruct.srcImgDataLengh <= 0
+//        || !destImgBuffer 
+//        || destBufferSize <= 0
+//        || pOverlayInfo == NULL
+//        || overlayCount <= 0)
+//    {
+//        printf("myDrawString, the parameter is invalid, return 1.\n ");
+//        return 1;
+//    }
+//    int iRet = 0;
+//
+//    UCHAR* pSrcData = dataStruct.srcImgData;
+//    long srcLength = dataStruct.srcImgDataLengh;
+//
+//    // 创建流
+//    IStream *pStreamSrc = NULL;
+//    // 创建输出流
+//    IStream* pStreamOut = NULL;
+//    LARGE_INTEGER liTemp = { 0 };
+//    ULARGE_INTEGER uLiZero = { 0 };
+//
+//    HRESULT hr1 = CreateStreamOnHGlobal(NULL, TRUE, &pStreamSrc);
+//    HRESULT hr2 = CreateStreamOnHGlobal(NULL, TRUE, &pStreamOut);
+//    if (hr1 != S_OK || hr2 != S_OK)
+//    {
+//        printf("CreateStreamOnHGlobal failed, return 2.\n ");
+//        iRet = 2;
+//
+//        if (pStreamOut != NULL)
+//        {
+//            pStreamOut->Release();
+//            pStreamOut = NULL;
+//        }
+//
+//        if (pStreamSrc != NULL)
+//        {
+//            pStreamSrc->Release();
+//            pStreamSrc = NULL;
+//        }
+//        return 2;
+//    }
+//
+//    // 初始化流
+//    pStreamSrc->Seek(liTemp, STREAM_SEEK_SET, NULL);
+//    pStreamSrc->SetSize(uLiZero);
+//
+//    pStreamOut->Seek(liTemp, STREAM_SEEK_SET, NULL);
+//    pStreamOut->SetSize(uLiZero);
+//
+//    // 将图像放入流中
+//    ULONG ulRealSize = 0;
+//    if (S_OK != pStreamSrc->Write(pSrcData, srcLength, &ulRealSize))
+//    {
+//        printf("pStreamSrc failed.\n");
+//        iRet = 3;
+//
+//        if (pStreamOut != NULL)
+//        {
+//            pStreamOut->Release();
+//            pStreamOut = NULL;
+//        }
+//
+//        if (pStreamSrc != NULL)
+//        {
+//            pStreamSrc->Release();
+//            pStreamSrc = NULL;
+//        }
+//        return 3;
+//    }
+//
+//    CLSID jpgClsid;
+//    CLSID bmpClsid;
+//    Tool_GetEncoderClsid(L"image/jpeg", &jpgClsid);
+//    Tool_GetEncoderClsid(L"image/bmp", &bmpClsid);
+//
+//    // 从流创建位图
+//    Gdiplus::Bitmap* pbmpSrc = Bitmap::FromStream(pStreamSrc);
+//    Gdiplus::Bitmap* pbmpDst = NULL;
+//    Gdiplus::Status rSata = Gdiplus::Ok;
+//    const OverlayInfo* pOverlay = pOverlayInfo;
+//    for (int i = 0; i < overlayCount; i++)
+//    {
+//        if (pbmpDst != NULL)
+//        {
+//            SAFE_DELETE_OBJ(pbmpSrc);
+//            pbmpSrc = pbmpDst->Clone(Rect(0, 0, pbmpDst->GetWidth(), (REAL)pbmpDst->GetHeight()), PixelFormatDontCare);
+//            
+//            SAFE_DELETE_OBJ(pbmpDst);
+//        }
+//        int iSrcWidth = pbmpSrc->GetWidth();
+//        int iSrcHeight = pbmpSrc->GetHeight();
+//
+//        
+//        Gdiplus::Color fontColor(pOverlay->st_fontColor.iColorAlpha, pOverlay->st_fontColor.iColorR, pOverlay->st_fontColor.iColorG, pOverlay->st_fontColor.iColorB);
+//        Gdiplus::SolidBrush  fontBrush(fontColor);
+//        Gdiplus::FontFamily  fontFamily(pOverlay->szFontFamily);
+//        Gdiplus::Font        font(&fontFamily, (float)(pOverlay->iFontSize), FontStyleRegular, UnitPixel);
+//
+//        Gdiplus::RectF  rectfOut;
+//        {
+//            //计算消息主题的高度
+//            Gdiplus::Bitmap bgtest(iSrcWidth, iSrcHeight);
+//            Gdiplus::Graphics    graphicsTest(&bgtest);
+//            Gdiplus::RectF rtGdiplus;//计算消息主题的宽度
+//            rtGdiplus.X = (pOverlay->st_FontPosition.iPosX > 0) ? pOverlay->st_FontPosition.iPosX : 0;
+//            rtGdiplus.Y = (pOverlay->st_FontPosition.iPosY > 0) ? pOverlay->st_FontPosition.iPosY : 0;
+//            rtGdiplus.Width = (float)iSrcWidth;
+//            rtGdiplus.Height = -1;
+//            graphicsTest.MeasureString(pOverlay->szOverlayString, -1, &font, rtGdiplus, &rectfOut);
+//            printf("MeasureString width = %f, height = %f\n", rectfOut.Width, rectfOut.Height);
+//        }
+//        int iDestWidth = 0.0, iDestHeight = 0.0;
+//        if (pOverlay->st_FontPosition.iPosY == POS_UP_TO_IMG   \
+//            || pOverlay->st_FontPosition.iPosY == POS_DOWN_TO_IMG
+//            )
+//        {
+//            iDestWidth = iSrcWidth;
+//            iDestHeight = (iSrcHeight + rectfOut.Height);
+//        }
+//        else
+//        {
+//            iDestWidth = iSrcWidth;
+//            iDestHeight = iSrcHeight;
+//        }
+//        pbmpDst = new Gdiplus::Bitmap(iDestWidth, iDestHeight);
+//        Gdiplus::Graphics    graphics(pbmpDst);
+//
+//        //先画图，再画矩形
+//        
+//        Gdiplus::Rect destRect;
+//        destRect.X = 0;
+//        destRect.Y = (pOverlay->st_FontPosition.iPosY == POS_UP_TO_IMG) ? rectfOut.Height : 0;
+//        destRect.Width = iSrcWidth;
+//        destRect.Height = iSrcHeight;
+//        rSata = graphics.DrawImage(pbmpSrc, destRect);
+//        if (rSata != Gdiplus::Ok)
+//        {
+//            printf("draw image failed.\n");
+//            iRet = 4;
+//
+//            SAFE_DELETE_OBJ(pbmpSrc);
+//            SAFE_DELETE_OBJ(pbmpDst);
+//
+//            if (pStreamOut != NULL)
+//            {
+//                pStreamOut->Release();
+//                pStreamOut = NULL;
+//            }
+//
+//            if (pStreamSrc != NULL)
+//            {
+//                pStreamSrc->Release();
+//                pStreamSrc = NULL;
+//            }
+//            return 4;
+//        }
+//
+//        //绘制矩形填充区
+//
+//        switch (pOverlay->st_FontPosition.iPosY)
+//        {
+//        case POS_UP_TO_IMG:        //矩形绘制到图片上方之外
+//            destRect.X = 0;
+//            destRect.Y = 0;
+//            break;
+//        case POS_DOWN_TO_IMG:        //矩形绘制到图片下方之外
+//            destRect.X = 0;
+//            destRect.Y = iSrcHeight;
+//            break;
+//        default:       //图片之内
+//            destRect.X = (pOverlay->st_FontPosition.iPosX >= 0) ? pOverlay->st_FontPosition.iPosX : 0;
+//            destRect.Y = (pOverlay->st_FontPosition.iPosY < 0) ? 0 : pOverlay->st_FontPosition.iPosY;
+//            break;
+//        }
+//
+//        //矩形宽度决策
+//        switch (pOverlay->iStyle)
+//        {
+//        case STYLE_ONLY_FONT_BACKGROUND:        //
+//            destRect.Width = rectfOut.Width;
+//            break;
+//        case STYLE_WHOLE_LINE:        //矩形绘制到整行        
+//            destRect.Width = iSrcWidth;
+//            break;
+//        default:       //图片之内
+//            destRect.Width = iSrcWidth;
+//            break;
+//        }
+//
+//        destRect.Height = rectfOut.Height;
+//        Gdiplus::SolidBrush myBrush(Gdiplus::Color(pOverlay->st_backgroundColor.iColorAlpha, pOverlay->st_backgroundColor.iColorR, pOverlay->st_backgroundColor.iColorG, pOverlay->st_backgroundColor.iColorB));
+//        rSata = graphics.FillRectangle(&myBrush, destRect);  //绘制矩形背景颜色
+//        if (rSata != Gdiplus::Ok)
+//        {
+//            printf("draw Rectangle failed.\n");
+//            iRet = 5;
+//
+//            SAFE_DELETE_OBJ(pbmpSrc);
+//            SAFE_DELETE_OBJ(pbmpDst);
+//
+//            if (pStreamOut != NULL)
+//            {
+//                pStreamOut->Release();
+//                pStreamOut = NULL;
+//            }
+//
+//            if (pStreamSrc != NULL)
+//            {
+//                pStreamSrc->Release();
+//                pStreamSrc = NULL;
+//            }
+//            return 5;
+//        }
+//
+//        Gdiplus::RectF rectString;
+//        rectString.X = pOverlay->st_FontPosition.iPosX;
+//        rectString.Y = destRect.Y;
+//        rectString.Width = rectfOut.Width;
+//        rectString.Height = rectfOut.Height;
+//        //#ifdef DEBUG
+//        //    graphics.DrawRectangle(&myPen, rectString);
+//        //#endif
+//
+//        rSata = graphics.DrawString(pOverlay->szOverlayString, -1, &font, rectString, NULL, &fontBrush);
+//        if (rSata != Gdiplus::Ok)
+//        {
+//            printf("draw string failed.\n");
+//            iRet = 6;
+//
+//            SAFE_DELETE_OBJ(pbmpSrc);
+//            SAFE_DELETE_OBJ(pbmpDst);
+//
+//            if (pStreamOut != NULL)
+//            {
+//                pStreamOut->Release();
+//                pStreamOut = NULL;
+//            }
+//
+//            if (pStreamSrc != NULL)
+//            {
+//                pStreamSrc->Release();
+//                pStreamSrc = NULL;
+//            }
+//            return 6;
+//        }
+//        printf("DrawString status = %d\n", rSata);
+//        //pbmpDst->Save(L"./1.bmp", &bmpClsid);
+//        pOverlay ++;
+//    }    
+//
+//
+//
+//    // 将位图按照JPG的格式保存到输出流中
+//    //int iQuality = 80 % 100;
+//    //EncoderParameters encoderParameters;
+//    //encoderParameters.Count = 1;
+//    //encoderParameters.Parameter[0].Guid = EncoderQuality;
+//    //encoderParameters.Parameter[0].Type = EncoderParameterValueTypeLong;
+//    //encoderParameters.Parameter[0].NumberOfValues = 1;
+//    //encoderParameters.Parameter[0].Value = &iQuality;
+//    //bmpDst.Save(pStreamOut, &jpgClsid, &encoderParameters);
+//    rSata = pbmpDst->Save(pStreamOut, &bmpClsid, NULL);
+//    if (rSata != Gdiplus::Ok)
+//    {
+//        printf("save to stream out failed.\n");
+//        iRet = 7;
+//
+//        SAFE_DELETE_OBJ(pbmpSrc);
+//        SAFE_DELETE_OBJ(pbmpDst);
+//
+//        if (pStreamOut != NULL)
+//        {
+//            pStreamOut->Release();
+//            pStreamOut = NULL;
+//        }
+//
+//        if (pStreamSrc != NULL)
+//        {
+//            pStreamSrc->Release();
+//            pStreamSrc = NULL;
+//        }
+//        return 7;
+//    }
+//
+//    // 获取输出流大小
+//    ULARGE_INTEGER libNewPos = { 0 };
+//    pStreamOut->Seek(liTemp, STREAM_SEEK_END, &libNewPos);      // 将流指针指向结束位置，从而获取流的大小 
+//    if (destBufferSize < (int)libNewPos.LowPart)                     // 用户分配的缓冲区不足
+//    {
+//        destBufferSize = libNewPos.LowPart;
+//        iRet = 8;
+//        printf("the buffer size is not enough.\n");
+//
+//        SAFE_DELETE_OBJ(pbmpSrc);
+//        SAFE_DELETE_OBJ(pbmpDst);
+//
+//        if (pStreamOut != NULL)
+//        {
+//            pStreamOut->Release();
+//            pStreamOut = NULL;
+//        }
+//
+//        if (pStreamSrc != NULL)
+//        {
+//            pStreamSrc->Release();
+//            pStreamSrc = NULL;
+//        }
+//        return 8;
+//    }
+//    else
+//    {
+//        pStreamOut->Seek(liTemp, STREAM_SEEK_SET, NULL);                   // 将流指针指向开始位置
+//        pStreamOut->Read(destImgBuffer, libNewPos.LowPart, &ulRealSize);           // 将转换后的JPG图片拷贝给用户
+//        destBufferSize = ulRealSize;
+//        iRet = 0;
+//    }
+//
+//    SAFE_DELETE_OBJ(pbmpSrc);
+//    SAFE_DELETE_OBJ(pbmpDst);
+//
+//    // 释放内存
+//    if (pStreamOut != NULL)
+//    {
+//        pStreamOut->Release();
+//        pStreamOut = NULL;
+//    }
+//
+//    if (pStreamSrc != NULL)
+//    {
+//        pStreamSrc->Release();
+//        pStreamSrc = NULL;
+//    }
+//
+//    return iRet;
+//}
+
+
+int DrawStringToImgEx_cximage(const ImgDataStruct dataStruct, const OverlayInfo* pOverlayInfo, int overlayCount, void* destImgBuffer, size_t& destBufferSize)
 {
 #define POS_UP_TO_IMG (-1)
 #define POS_DOWN_TO_IMG (-2)
@@ -1266,9 +1619,12 @@ int DrawStringToImgEx(const ImgDataStruct dataStruct, const OverlayInfo* pOverla
 #define STYLE_ONLY_FONT_BACKGROUND (1)
 #define STYLE_WHOLE_LINE (2)
 
+#define DEST_IMG_WIDHT 1600
+#define DEST_IMG_HEIGHT 1200
+
     if (!dataStruct.srcImgData
         || dataStruct.srcImgDataLengh <= 0
-        || !destImgBuffer 
+        || !destImgBuffer
         || destBufferSize <= 0
         || pOverlayInfo == NULL
         || overlayCount <= 0)
@@ -1276,332 +1632,175 @@ int DrawStringToImgEx(const ImgDataStruct dataStruct, const OverlayInfo* pOverla
         printf("myDrawString, the parameter is invalid, return 1.\n ");
         return 1;
     }
-    int iRet = 0;
+    DWORD dwFirst = GetTickCount();
+    DWORD    dwSecond = GetTickCount();
+    DWORD    dwThird = GetTickCount();
 
-    UCHAR* pSrcData = dataStruct.srcImgData;
-    long srcLength = dataStruct.srcImgDataLengh;
+    CxImage imageMix((BYTE*)dataStruct.srcImgData, dataStruct.srcImgDataLengh, CXIMAGE_FORMAT_JPG);
+    //CxImage imageMix;
+    //imageMix.Load("234.jpg", CXIMAGE_FORMAT_JPG);
+    //BYTE* pB = NULL;
+    //long lSize = 0;
+    //imageMix.Encode(pB, lSize, CXIMAGE_FORMAT_JPG);
 
-    // 创建流
-    IStream *pStreamSrc = NULL;
-    // 创建输出流
-    IStream* pStreamOut = NULL;
-    LARGE_INTEGER liTemp = { 0 };
-    ULARGE_INTEGER uLiZero = { 0 };
+    //if (imageMix.Save("123.jpg", CXIMAGE_FORMAT_JPG))
+    //{
+    //    printf("save image success\n");
+    //}
+    //else
+    //{
+    //    printf("save image failed\n");
+    //}
 
-    HRESULT hr1 = CreateStreamOnHGlobal(NULL, TRUE, &pStreamSrc);
-    HRESULT hr2 = CreateStreamOnHGlobal(NULL, TRUE, &pStreamOut);
-    if (hr1 != S_OK || hr2 != S_OK)
-    {
-        printf("CreateStreamOnHGlobal failed, return 2.\n ");
-        iRet = 2;
+    dwSecond = GetTickCount();
 
-        if (pStreamOut != NULL)
-        {
-            pStreamOut->Release();
-            pStreamOut = NULL;
-        }
+    printf("load image finish, %lu, use Time = %lu\n", dwSecond - dwFirst, dwSecond - dwThird);
+    dwThird = dwSecond;
+    imageMix.Resample(DEST_IMG_WIDHT, DEST_IMG_HEIGHT);
 
-        if (pStreamSrc != NULL)
-        {
-            pStreamSrc->Release();
-            pStreamSrc = NULL;
-        }
-        return 2;
-    }
+    //if (imageMix.Save("234.jpg", CXIMAGE_FORMAT_JPG))
+    //{
+    //    printf("save image success\n");
+    //}
+    //else
+    //{
+    //    printf("save image failed\n");
+    //}
 
-    // 初始化流
-    pStreamSrc->Seek(liTemp, STREAM_SEEK_SET, NULL);
-    pStreamSrc->SetSize(uLiZero);
+    dwSecond = GetTickCount();
+    printf("Resample finish, %lu, use Time = %lu\n", dwSecond - dwFirst, dwSecond - dwThird);
+    dwThird = dwSecond;
 
-    pStreamOut->Seek(liTemp, STREAM_SEEK_SET, NULL);
-    pStreamOut->SetSize(uLiZero);
-
-    // 将图像放入流中
-    ULONG ulRealSize = 0;
-    if (S_OK != pStreamSrc->Write(pSrcData, srcLength, &ulRealSize))
-    {
-        printf("pStreamSrc failed.\n");
-        iRet = 3;
-
-        if (pStreamOut != NULL)
-        {
-            pStreamOut->Release();
-            pStreamOut = NULL;
-        }
-
-        if (pStreamSrc != NULL)
-        {
-            pStreamSrc->Release();
-            pStreamSrc = NULL;
-        }
-        return 3;
-    }
-
-    CLSID jpgClsid;
-    CLSID bmpClsid;
-    Tool_GetEncoderClsid(L"image/jpeg", &jpgClsid);
-    Tool_GetEncoderClsid(L"image/bmp", &bmpClsid);
-
-    // 从流创建位图
-    Gdiplus::Bitmap* pbmpSrc = Bitmap::FromStream(pStreamSrc);
-    Gdiplus::Bitmap* pbmpDst = NULL;
-    Gdiplus::Status rSata = Gdiplus::Ok;
     const OverlayInfo* pOverlay = pOverlayInfo;
     for (int i = 0; i < overlayCount; i++)
     {
-        if (pbmpDst != NULL)
-        {
-            SAFE_DELETE_OBJ(pbmpSrc);
-            pbmpSrc = pbmpDst->Clone(Rect(0, 0, pbmpDst->GetWidth(), (REAL)pbmpDst->GetHeight()), PixelFormatDontCare);
-            
-            SAFE_DELETE_OBJ(pbmpDst);
-        }
-        int iSrcWidth = pbmpSrc->GetWidth();
-        int iSrcHeight = pbmpSrc->GetHeight();
+        CxImage::CXTEXTINFO  textInfo;
+        imageMix.InitTextInfo(&textInfo);
 
-        
-        Gdiplus::Color fontColor(pOverlay->st_fontColor.iColorAlpha, pOverlay->st_fontColor.iColorR, pOverlay->st_fontColor.iColorG, pOverlay->st_fontColor.iColorB);
-        Gdiplus::SolidBrush  fontBrush(fontColor);
-        Gdiplus::FontFamily  fontFamily(pOverlay->szFontFamily);
-        Gdiplus::Font        font(&fontFamily, (float)(pOverlay->iFontSize), FontStyleRegular, UnitPixel);
+        dwSecond = GetTickCount();
+        printf("InitTextInfo finish, %lu, use Time = %lu\n", dwSecond - dwFirst, dwSecond - dwThird);
+        dwThird = dwSecond;
 
-        Gdiplus::RectF  rectfOut;
+        _stprintf(textInfo.lfont.lfFaceName, pOverlay->szFontFamily);
+        textInfo.lfont.lfCharSet = GB2312_CHARSET;
+        textInfo.lfont.lfHeight = pOverlay->iFontSize;
+        //textInfo.lfont.lfWidth = pOverlay->iFontSize;
+        textInfo.align = DT_LEFT;
+
+        textInfo.fcolor = RGB(pOverlay->st_fontColor.iColorR,
+            pOverlay->st_fontColor.iColorG,
+            pOverlay->st_fontColor.iColorB);
+
+        textInfo.bcolor = RGB(pOverlay->st_backgroundColor.iColorR,
+            pOverlay->st_backgroundColor.iColorG,
+            pOverlay->st_backgroundColor.iColorB);
+        textInfo.opaque = pOverlay->st_backgroundColor.iColorAlpha < 255 ? true : false;
+        //SnapPicTime.b_opacity = float(pOverlay->st_backgroundColor.iColorAlpha)/255;
+        textInfo.b_opacity = 1.0;
+        textInfo.b_round = 0;
+
+        sprintf_s(textInfo.text, sizeof(textInfo.text), "%s", pOverlay->szOverlayString);
+        //printf("overlay string strlen('%s') = %d \n", textInfo.text, strlen(textInfo.text));
+
+        int iPosX = pOverlay->st_FontPosition.iPosX + pOverlay->iFontSize;
+        int iPosY = pOverlay->st_FontPosition.iPosY + pOverlay->iFontSize;
+        CxImage imageTemp;
+        RGBQUAD color;
+        switch (pOverlay->st_FontPosition.iPosY)
         {
-            //计算消息主题的高度
-            Gdiplus::Bitmap bgtest(iSrcWidth, iSrcHeight);
-            Gdiplus::Graphics    graphicsTest(&bgtest);
-            Gdiplus::RectF rtGdiplus;//计算消息主题的宽度
-            rtGdiplus.X = (pOverlay->st_FontPosition.iPosX > 0) ? pOverlay->st_FontPosition.iPosX : 0;
-            rtGdiplus.Y = (pOverlay->st_FontPosition.iPosY > 0) ? pOverlay->st_FontPosition.iPosY : 0;
-            rtGdiplus.Width = (float)iSrcWidth;
-            rtGdiplus.Height = -1;
-            graphicsTest.MeasureString(pOverlay->szOverlayString, -1, &font, rtGdiplus, &rectfOut);
-            printf("MeasureString width = %f, height = %f\n", rectfOut.Width, rectfOut.Height);
+        case POS_UP_TO_IMG:        //矩形绘制到图片上方之外           
+            iPosX = 0;
+            color = { pOverlay->st_backgroundColor.iColorB,
+                pOverlay->st_backgroundColor.iColorG,
+                pOverlay->st_backgroundColor.iColorR,
+                0 };
+            if (imageMix.Expand(0, 80, 0, 0, color, &imageTemp))
+            {
+                printf("Expand POS_UP_TO_IMG success.\n");
+                //imageFinal.Save("expand.jpg", CXIMAGE_FORMAT_JPG);
+                imageMix = imageTemp;
+                dwSecond = GetTickCount();
+                printf("Expand finish, %lu, use Time = %lu\n", dwSecond - dwFirst, dwSecond - dwThird);
+                dwThird = dwSecond;
+            }
+            break;
+        case POS_DOWN_TO_IMG:        //矩形绘制到图片下方之外
+            iPosX = 0;
+            iPosY = imageMix.GetHeight() + pOverlay->iFontSize * 2;
+            //iPosY = imageMix.GetHeight() ;
+            color = { pOverlay->st_backgroundColor.iColorB,
+                pOverlay->st_backgroundColor.iColorG,
+                pOverlay->st_backgroundColor.iColorR,
+                0 };
+            if (imageMix.Expand(0, 0, 0, 80, color, &imageTemp))
+            {
+                printf("Expand POS_DOWN_TO_IMG success.\n");
+                //imageFinal.Save("expand.jpg", CXIMAGE_FORMAT_JPG);
+                imageMix = imageTemp;
+                dwSecond = GetTickCount();
+                printf("Expand finish., %lu, use Time = %lu\n", dwSecond - dwFirst, dwSecond - dwThird);
+                dwThird = dwSecond;
+            }
+            break;
+        default:       //图片之内
+            iPosX = (pOverlay->st_FontPosition.iPosX >= 0) ? iPosX : 0;
+            iPosY = (pOverlay->st_FontPosition.iPosY < 0) ? 0 : iPosY;
+            break;
         }
-        int iDestWidth = 0.0, iDestHeight = 0.0;
-        if (pOverlay->st_FontPosition.iPosY == POS_UP_TO_IMG   \
-            || pOverlay->st_FontPosition.iPosY == POS_DOWN_TO_IMG
-            )
+        if (NULL == imageMix.DrawStringEx(0, iPosX, iPosY, &textInfo, true))
+        if (NULL == imageMix.DrawStringEx(0, iPosX, iPosY, &textInfo, true))
         {
-            iDestWidth = iSrcWidth;
-            iDestHeight = (iSrcHeight + rectfOut.Height);
+            dwSecond = GetTickCount();
+            printf("DrawStringEx failed, %lu, use Time = %lu\n", dwSecond - dwFirst, dwSecond - dwThird);
+            dwThird = dwSecond;
         }
         else
         {
-            iDestWidth = iSrcWidth;
-            iDestHeight = iSrcHeight;
+            dwSecond = GetTickCount();
+            printf("DrawStringEx finish, %lu, use Time = %lu\n", dwSecond - dwFirst, dwSecond - dwThird);
+            dwThird = dwSecond;
         }
-        pbmpDst = new Gdiplus::Bitmap(iDestWidth, iDestHeight);
-        Gdiplus::Graphics    graphics(pbmpDst);
-
-        //先画图，再画矩形
-        
-        Gdiplus::Rect destRect;
-        destRect.X = 0;
-        destRect.Y = (pOverlay->st_FontPosition.iPosY == POS_UP_TO_IMG) ? rectfOut.Height : 0;
-        destRect.Width = iSrcWidth;
-        destRect.Height = iSrcHeight;
-        rSata = graphics.DrawImage(pbmpSrc, destRect);
-        if (rSata != Gdiplus::Ok)
-        {
-            printf("draw image failed.\n");
-            iRet = 4;
-
-            SAFE_DELETE_OBJ(pbmpSrc);
-            SAFE_DELETE_OBJ(pbmpDst);
-
-            if (pStreamOut != NULL)
-            {
-                pStreamOut->Release();
-                pStreamOut = NULL;
-            }
-
-            if (pStreamSrc != NULL)
-            {
-                pStreamSrc->Release();
-                pStreamSrc = NULL;
-            }
-            return 4;
-        }
-
-        //绘制矩形填充区
-
-        switch (pOverlay->st_FontPosition.iPosY)
-        {
-        case POS_UP_TO_IMG:        //矩形绘制到图片上方之外
-            destRect.X = 0;
-            destRect.Y = 0;
-            break;
-        case POS_DOWN_TO_IMG:        //矩形绘制到图片下方之外
-            destRect.X = 0;
-            destRect.Y = iSrcHeight;
-            break;
-        default:       //图片之内
-            destRect.X = (pOverlay->st_FontPosition.iPosX >= 0) ? pOverlay->st_FontPosition.iPosX : 0;
-            destRect.Y = (pOverlay->st_FontPosition.iPosY < 0) ? 0 : pOverlay->st_FontPosition.iPosY;
-            break;
-        }
-
-        //矩形宽度决策
-        switch (pOverlay->iStyle)
-        {
-        case STYLE_ONLY_FONT_BACKGROUND:        //
-            destRect.Width = rectfOut.Width;
-            break;
-        case STYLE_WHOLE_LINE:        //矩形绘制到整行        
-            destRect.Width = iSrcWidth;
-            break;
-        default:       //图片之内
-            destRect.Width = iSrcWidth;
-            break;
-        }
-
-        destRect.Height = rectfOut.Height;
-        Gdiplus::SolidBrush myBrush(Gdiplus::Color(pOverlay->st_backgroundColor.iColorAlpha, pOverlay->st_backgroundColor.iColorR, pOverlay->st_backgroundColor.iColorG, pOverlay->st_backgroundColor.iColorB));
-        rSata = graphics.FillRectangle(&myBrush, destRect);  //绘制矩形背景颜色
-        if (rSata != Gdiplus::Ok)
-        {
-            printf("draw Rectangle failed.\n");
-            iRet = 5;
-
-            SAFE_DELETE_OBJ(pbmpSrc);
-            SAFE_DELETE_OBJ(pbmpDst);
-
-            if (pStreamOut != NULL)
-            {
-                pStreamOut->Release();
-                pStreamOut = NULL;
-            }
-
-            if (pStreamSrc != NULL)
-            {
-                pStreamSrc->Release();
-                pStreamSrc = NULL;
-            }
-            return 5;
-        }
-
-        Gdiplus::RectF rectString;
-        rectString.X = pOverlay->st_FontPosition.iPosX;
-        rectString.Y = destRect.Y;
-        rectString.Width = rectfOut.Width;
-        rectString.Height = rectfOut.Height;
-        //#ifdef DEBUG
-        //    graphics.DrawRectangle(&myPen, rectString);
-        //#endif
-
-        rSata = graphics.DrawString(pOverlay->szOverlayString, -1, &font, rectString, NULL, &fontBrush);
-        if (rSata != Gdiplus::Ok)
-        {
-            printf("draw string failed.\n");
-            iRet = 6;
-
-            SAFE_DELETE_OBJ(pbmpSrc);
-            SAFE_DELETE_OBJ(pbmpDst);
-
-            if (pStreamOut != NULL)
-            {
-                pStreamOut->Release();
-                pStreamOut = NULL;
-            }
-
-            if (pStreamSrc != NULL)
-            {
-                pStreamSrc->Release();
-                pStreamSrc = NULL;
-            }
-            return 6;
-        }
-        printf("DrawString status = %d\n", rSata);
-        //pbmpDst->Save(L"./1.bmp", &bmpClsid);
-        pOverlay ++;
-    }    
-
-
-
-    // 将位图按照JPG的格式保存到输出流中
-    //int iQuality = 80 % 100;
-    //EncoderParameters encoderParameters;
-    //encoderParameters.Count = 1;
-    //encoderParameters.Parameter[0].Guid = EncoderQuality;
-    //encoderParameters.Parameter[0].Type = EncoderParameterValueTypeLong;
-    //encoderParameters.Parameter[0].NumberOfValues = 1;
-    //encoderParameters.Parameter[0].Value = &iQuality;
-    //bmpDst.Save(pStreamOut, &jpgClsid, &encoderParameters);
-    rSata = pbmpDst->Save(pStreamOut, &bmpClsid, NULL);
-    if (rSata != Gdiplus::Ok)
-    {
-        printf("save to stream out failed.\n");
-        iRet = 7;
-
-        SAFE_DELETE_OBJ(pbmpSrc);
-        SAFE_DELETE_OBJ(pbmpDst);
-
-        if (pStreamOut != NULL)
-        {
-            pStreamOut->Release();
-            pStreamOut = NULL;
-        }
-
-        if (pStreamSrc != NULL)
-        {
-            pStreamSrc->Release();
-            pStreamSrc = NULL;
-        }
-        return 7;
+        pOverlay++;
     }
 
-    // 获取输出流大小
-    ULARGE_INTEGER libNewPos = { 0 };
-    pStreamOut->Seek(liTemp, STREAM_SEEK_END, &libNewPos);      // 将流指针指向结束位置，从而获取流的大小 
-    if (destBufferSize < (int)libNewPos.LowPart)                     // 用户分配的缓冲区不足
+    int iRet = -1;
+    long size = 0;
+    BYTE* buffer = NULL;
+    if (imageMix.IsValid()
+        && imageMix.Encode(buffer, size, CXIMAGE_FORMAT_JPG))
     {
-        destBufferSize = libNewPos.LowPart;
-        iRet = 8;
-        printf("the buffer size is not enough.\n");
+        dwSecond = GetTickCount();
+        printf("Encode finish., %lu, use Time = %lu\n", dwSecond - dwFirst, dwSecond - dwThird);
+        dwThird = dwSecond;
 
-        SAFE_DELETE_OBJ(pbmpSrc);
-        SAFE_DELETE_OBJ(pbmpDst);
-
-        if (pStreamOut != NULL)
+        printf("Encode success, final size = %ld \n", size);
+        if (size < destBufferSize)
         {
-            pStreamOut->Release();
-            pStreamOut = NULL;
-        }
+            printf("copy data to buffer \n");
+            memcpy(destImgBuffer, buffer, size);
+            destBufferSize = size;
 
-        if (pStreamSrc != NULL)
-        {
-            pStreamSrc->Release();
-            pStreamSrc = NULL;
+            iRet = 0;
         }
-        return 8;
+        else
+        {
+            printf(" buffer size %u is smaller than image size %ld ,stop copy data.\n", destBufferSize, size);
+            iRet = 1;
+        }
     }
     else
     {
-        pStreamOut->Seek(liTemp, STREAM_SEEK_SET, NULL);                   // 将流指针指向开始位置
-        pStreamOut->Read(destImgBuffer, libNewPos.LowPart, &ulRealSize);           // 将转换后的JPG图片拷贝给用户
-        destBufferSize = ulRealSize;
-        iRet = 0;
+        printf("Encode failed\n");
     }
 
-    SAFE_DELETE_OBJ(pbmpSrc);
-    SAFE_DELETE_OBJ(pbmpDst);
+    imageMix.FreeMemory(buffer);
 
-    // 释放内存
-    if (pStreamOut != NULL)
-    {
-        pStreamOut->Release();
-        pStreamOut = NULL;
-    }
-
-    if (pStreamSrc != NULL)
-    {
-        pStreamSrc->Release();
-        pStreamSrc = NULL;
-    }
-
+    dwSecond = GetTickCount();
+    printf("DrawStringToImgEx_cximage finish, %lu, use Time = %lu\n", dwSecond - dwFirst, dwSecond - dwThird);
+    dwThird = dwSecond;
     return iRet;
 }
+
 
 const int BIN_BIT_COUNT = 8;
 const int BIN_WIDTH = 112;
@@ -1720,7 +1919,83 @@ void Tool_Bin2BMP(PBYTE pbBinData, PBYTE pbBmpData, INT& nBmpLen)
     nBmpLen = iBitmapDataLen;
 }
 
-int DrawHeadStyleString(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength, const char* overlayString, int posX, int posY)
+//int DrawHeadStyleString(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength, const char* overlayString, int posX, int posY)
+//{
+//    if (NULL == srcImgData
+//        || NULL == destImgData
+//        || srcLength <= 0
+//        || destLength <= 0
+//        || NULL == overlayString
+//        )
+//    {
+//        return false;
+//    }
+//    ImgDataStruct dataStruct;
+//    dataStruct.srcImgData = (unsigned char*)srcImgData;
+//    dataStruct.srcImgDataLengh = srcLength;
+//
+//    OverlayInfo overlayInfo1;
+//    overlayInfo1.szFontFamily = L"黑体";
+//    overlayInfo1.st_backgroundColor.iColorAlpha = 55;
+//    overlayInfo1.st_backgroundColor.iColorR = 0;
+//    overlayInfo1.st_backgroundColor.iColorG = 0;
+//    overlayInfo1.st_backgroundColor.iColorB = 0;
+//
+//    overlayInfo1.iFontSize = 32;
+//    overlayInfo1.st_fontColor.iColorAlpha = 255;
+//    overlayInfo1.st_fontColor.iColorR = 255;
+//    overlayInfo1.st_fontColor.iColorG = 255;
+//    overlayInfo1.st_fontColor.iColorB = 255;
+//
+//    overlayInfo1.st_FontPosition.iPosX = posX;
+//    overlayInfo1.st_FontPosition.iPosY = posY;
+//
+//    std::wstring wstrOverlayInfo = Img_string2wstring(overlayString);
+//    overlayInfo1.szOverlayString = wstrOverlayInfo.c_str();
+//    overlayInfo1.iStyle = 1;
+//
+//    return DrawStringToImg(dataStruct, overlayInfo1, destImgData, destLength);
+//}
+
+//int DrawEnd1String(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength, const char* overlayString, int posX, int posY)
+//{
+//    if (NULL == srcImgData
+//        || NULL == destImgData
+//        || srcLength <= 0
+//        || destLength <= 0
+//        || NULL == overlayString
+//        )
+//    {
+//        return false;
+//    }
+//    ImgDataStruct dataStruct;
+//    dataStruct.srcImgData = (unsigned char*)srcImgData;
+//    dataStruct.srcImgDataLengh = srcLength;
+//
+//    OverlayInfo overlayInfo1;
+//    overlayInfo1.szFontFamily = L"黑体";
+//    overlayInfo1.st_backgroundColor.iColorAlpha = 55;
+//    overlayInfo1.st_backgroundColor.iColorR = 0;
+//    overlayInfo1.st_backgroundColor.iColorG = 0;
+//    overlayInfo1.st_backgroundColor.iColorB = 0;
+//
+//    overlayInfo1.iFontSize = 32;
+//    overlayInfo1.st_fontColor.iColorAlpha = 255;
+//    overlayInfo1.st_fontColor.iColorR = 255;
+//    overlayInfo1.st_fontColor.iColorG = 255;
+//    overlayInfo1.st_fontColor.iColorB = 255;
+//
+//    overlayInfo1.st_FontPosition.iPosX = posX;
+//    overlayInfo1.st_FontPosition.iPosY = posY;
+//
+//    std::wstring wstrOverlayInfo = Img_string2wstring(overlayString);
+//    overlayInfo1.szOverlayString = wstrOverlayInfo.c_str();
+//    overlayInfo1.iStyle = 1;
+//
+//    return DrawStringToImg(dataStruct, overlayInfo1, destImgData, destLength);
+//}
+
+int DrawEnd2String(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength, const char* overlayString, int posX, int posY)
 {
     if (NULL == srcImgData
         || NULL == destImgData
@@ -1736,83 +2011,8 @@ int DrawHeadStyleString(void* srcImgData, size_t srcLength, void* destImgData, s
     dataStruct.srcImgDataLengh = srcLength;
 
     OverlayInfo overlayInfo1;
-    overlayInfo1.szFontFamily = L"黑体";
-    overlayInfo1.st_backgroundColor.iColorAlpha = 55;
-    overlayInfo1.st_backgroundColor.iColorR = 0;
-    overlayInfo1.st_backgroundColor.iColorG = 0;
-    overlayInfo1.st_backgroundColor.iColorB = 0;
-
-    overlayInfo1.iFontSize = 32;
-    overlayInfo1.st_fontColor.iColorAlpha = 255;
-    overlayInfo1.st_fontColor.iColorR = 255;
-    overlayInfo1.st_fontColor.iColorG = 255;
-    overlayInfo1.st_fontColor.iColorB = 255;
-
-    overlayInfo1.st_FontPosition.iPosX = posX;
-    overlayInfo1.st_FontPosition.iPosY = posY;
-
-    std::wstring wstrOverlayInfo = Img_string2wstring(overlayString);
-    overlayInfo1.szOverlayString = wstrOverlayInfo.c_str();
-    overlayInfo1.iStyle = 1;
-
-    return DrawStringToImg(dataStruct, overlayInfo1, destImgData, destLength);
-}
-
-int DrawEnd1String(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength, const char* overlayString, int posX, int posY)
-{
-    if (NULL == srcImgData
-        || NULL == destImgData
-        || srcLength <= 0
-        || destLength <= 0
-        || NULL == overlayString
-        )
-    {
-        return false;
-    }
-    ImgDataStruct dataStruct;
-    dataStruct.srcImgData = (unsigned char*)srcImgData;
-    dataStruct.srcImgDataLengh = srcLength;
-
-    OverlayInfo overlayInfo1;
-    overlayInfo1.szFontFamily = L"黑体";
-    overlayInfo1.st_backgroundColor.iColorAlpha = 55;
-    overlayInfo1.st_backgroundColor.iColorR = 0;
-    overlayInfo1.st_backgroundColor.iColorG = 0;
-    overlayInfo1.st_backgroundColor.iColorB = 0;
-
-    overlayInfo1.iFontSize = 32;
-    overlayInfo1.st_fontColor.iColorAlpha = 255;
-    overlayInfo1.st_fontColor.iColorR = 255;
-    overlayInfo1.st_fontColor.iColorG = 255;
-    overlayInfo1.st_fontColor.iColorB = 255;
-
-    overlayInfo1.st_FontPosition.iPosX = posX;
-    overlayInfo1.st_FontPosition.iPosY = posY;
-
-    std::wstring wstrOverlayInfo = Img_string2wstring(overlayString);
-    overlayInfo1.szOverlayString = wstrOverlayInfo.c_str();
-    overlayInfo1.iStyle = 1;
-
-    return DrawStringToImg(dataStruct, overlayInfo1, destImgData, destLength);
-}
-
-int DrawEnd2String(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength,const char* overlayString, int posX, int posY)
-{
-    if (NULL == srcImgData
-        || NULL == destImgData
-        || srcLength <= 0
-        || destLength <= 0
-        || NULL == overlayString
-        )
-    {
-        return false;
-    }
-    ImgDataStruct dataStruct;
-    dataStruct.srcImgData = (unsigned char*)srcImgData;
-    dataStruct.srcImgDataLengh = srcLength;
-
-    OverlayInfo overlayInfo1;
-    overlayInfo1.szFontFamily = L"Times New Roman";
+    //overlayInfo1.szFontFamily = L"Times New Roman";
+    overlayInfo1.szFontFamily = "Times New Roman";
     overlayInfo1.st_backgroundColor.iColorAlpha = 255;
     overlayInfo1.st_backgroundColor.iColorR = 11;
     overlayInfo1.st_backgroundColor.iColorG = 113;
@@ -1827,7 +2027,8 @@ int DrawEnd2String(void* srcImgData, size_t srcLength, void* destImgData, size_t
     overlayInfo1.st_FontPosition.iPosX = posX;
     overlayInfo1.st_FontPosition.iPosY = posY;
 
-    std::wstring wstrOverlayInfo = Img_string2wstring(overlayString);
+    //std::wstring wstrOverlayInfo = Img_string2wstring(overlayString);
+    std::string wstrOverlayInfo(overlayString);
     overlayInfo1.szOverlayString = wstrOverlayInfo.c_str();
 
     return DrawStringToImg(dataStruct, overlayInfo1, destImgData, destLength);
