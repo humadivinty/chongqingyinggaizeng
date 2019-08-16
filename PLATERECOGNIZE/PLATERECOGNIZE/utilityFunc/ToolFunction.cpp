@@ -1643,7 +1643,7 @@ int DrawStringToImgEx_cximage(const ImgDataStruct dataStruct, const OverlayInfo*
     //long lSize = 0;
     //imageMix.Encode(pB, lSize, CXIMAGE_FORMAT_JPG);
 
-    //if (imageMix.Save("123.jpg", CXIMAGE_FORMAT_JPG))
+    //if (imageMix.Save("orige.jpg", CXIMAGE_FORMAT_JPG))
     //{
     //    printf("save image success\n");
     //}
@@ -1658,7 +1658,7 @@ int DrawStringToImgEx_cximage(const ImgDataStruct dataStruct, const OverlayInfo*
     dwThird = dwSecond;
     imageMix.Resample(DEST_IMG_WIDHT, DEST_IMG_HEIGHT);
 
-    //if (imageMix.Save("234.jpg", CXIMAGE_FORMAT_JPG))
+    //if (imageMix.Save("123.jpg", CXIMAGE_FORMAT_JPG))
     //{
     //    printf("save image success\n");
     //}
@@ -1767,7 +1767,7 @@ int DrawStringToImgEx_cximage(const ImgDataStruct dataStruct, const OverlayInfo*
     long size = 0;
     BYTE* buffer = NULL;
     if (imageMix.IsValid()
-        && imageMix.Encode(buffer, size, CXIMAGE_FORMAT_JPG))
+        && imageMix.Encode(buffer, size, CXIMAGE_FORMAT_JPG)) 
     {
         dwSecond = GetTickCount();
         printf("Encode finish., %lu, use Time = %lu\n", dwSecond - dwFirst, dwSecond - dwThird);

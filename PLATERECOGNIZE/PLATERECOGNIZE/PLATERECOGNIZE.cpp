@@ -1001,137 +1001,6 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
             if (ImageType == COLOR_VEHICLE_HEAD_IMG
                 || ImageType == FULL_IMG)
             {
-                struct tm local;
-                time_t nowtime;
-                nowtime = time(NULL); //获取日历时间  
-                //local = localtime(&nowtime);  //获取当前系统时间
-                localtime_s(&local, &nowtime);
-
-                //std::wstring wstrOverlayInfo = Img_string2wstring(Overlay);
-                
-                //叠加车道号信息
-                char szOverlayInfo[MAX_PATH] = { 0 };
-                sprintf_s(szOverlayInfo, sizeof(szOverlayInfo), "%s", Result->chSignStationName);
-                MyRectf rectfOut;
-                Tool_CalculateStringWithAndHeight(szOverlayInfo, iWidth, iHeight, 32, L"黑体", rectfOut);
-
-                OverlayInfo inForArray[4];
-
-                OverlayInfo overlayInfo1;
-                //overlayInfo1.szFontFamily = L"黑体";
-                overlayInfo1.szFontFamily = "黑体";
-                overlayInfo1.st_backgroundColor.iColorAlpha = 55;
-                overlayInfo1.st_backgroundColor.iColorR = 108;
-                overlayInfo1.st_backgroundColor.iColorG = 120;
-                overlayInfo1.st_backgroundColor.iColorB = 132;
-
-                overlayInfo1.iFontSize = 32;
-                overlayInfo1.st_fontColor.iColorAlpha = 255;
-                overlayInfo1.st_fontColor.iColorR = 255;
-                overlayInfo1.st_fontColor.iColorG = 255;
-                overlayInfo1.st_fontColor.iColorB = 255;
-
-                overlayInfo1.st_FontPosition.iPosX = 32;
-                overlayInfo1.st_FontPosition.iPosY = rectfOut.Height;
-
-                //std::wstring wstrOverlayInfo = Img_string2wstring(szOverlayInfo);
-                std::string wstrOverlayInfo(szOverlayInfo);
-                overlayInfo1.szOverlayString = wstrOverlayInfo.c_str();
-                overlayInfo1.iStyle = 1;
-
-                inForArray[0] = overlayInfo1;
-
-
-                //叠加第一行 时间信息
-                memset(szOverlayInfo, '\0', sizeof(szOverlayInfo));
-                sprintf_s(szOverlayInfo, sizeof(szOverlayInfo), "%04d年%02d月%02d日 %02d:%02d:%02d",
-                    local.tm_year + 1900,
-                    local.tm_mon + 1,
-                    local.tm_mday,
-                    local.tm_hour,
-                    local.tm_min,
-                    local.tm_sec);
-                memset(&rectfOut, 0, sizeof(rectfOut));
-                //Tool_CalculateStringWithAndHeight(szOverlayInfo, iWidth, iHeight, 32, L"黑体", rectfOut);
-                Tool_CalculateStringWithAndHeight(szOverlayInfo, DEST_IMG_WIDTH, DEST_IMG_HEIGHT, 32, L"黑体", rectfOut);
-
-                OverlayInfo overlayInfo2;
-                overlayInfo2 = overlayInfo1;
-
-                //overlayInfo2.st_FontPosition.iPosX = iWidth - rectfOut.Width - 32;
-                overlayInfo2.st_FontPosition.iPosX = DEST_IMG_WIDTH - rectfOut.Width - 32;
-                overlayInfo2.st_FontPosition.iPosY = rectfOut.Height;
-
-                //std::wstring wstrOverlayInfo2 = Img_string2wstring(szOverlayInfo);
-                //overlayInfo2.szOverlayString = wstrOverlayInfo2.c_str();
-                std::string wstrOverlayInfo2(szOverlayInfo);
-                overlayInfo2.szOverlayString = wstrOverlayInfo2.c_str();
-                overlayInfo2.iStyle = 1;
-
-                inForArray[1] = overlayInfo2;
-
-                //叠加第二行 抓拍信息
-                memset(szOverlayInfo, '\0', sizeof(szOverlayInfo));
-                sprintf_s(szOverlayInfo, sizeof(szOverlayInfo), "%s%s", Result->chPlateColor, Result->chPlateNO);
-                OverlayInfo overlayInfo3;
-                overlayInfo3 = overlayInfo1;
-
-                overlayInfo3.st_FontPosition.iPosX = 32;
-                //overlayInfo3.st_FontPosition.iPosY = iHeight - 2 * 32;
-                overlayInfo3.st_FontPosition.iPosY = DEST_IMG_HEIGHT - 2 * 32;
-
-                //std::wstring wstrOverlayInfo3 = Img_string2wstring(szOverlayInfo);
-                //overlayInfo3.szOverlayString = wstrOverlayInfo3.c_str();
-                std::string wstrOverlayInfo3(szOverlayInfo);
-                overlayInfo3.szOverlayString = wstrOverlayInfo3.c_str();
-                overlayInfo3.iStyle = 1;
-
-                inForArray[2] = overlayInfo3;
-
-                //叠加第三行 收费信息
-                memset(szOverlayInfo, '\0', sizeof(szOverlayInfo));
-                szOverlayInfo[0] = '\n';
-                size_t iLength = strlen(Overlay);
-                if (iLength < sizeof(szOverlayInfo))
-                {
-                    memcpy(szOverlayInfo + 1, Overlay, iLength);
-                    iLength = iLength > 0 ? iLength : 0;
-                    szOverlayInfo[iLength + 1] = '\0';
-                }
-                else
-                {
-                    memcpy(szOverlayInfo + 1, Overlay, sizeof(szOverlayInfo));
-                    szOverlayInfo[sizeof(szOverlayInfo)-1] = '\0';
-                }
-
-                OverlayInfo overlayInfo4;
-                //overlayInfo4.szFontFamily = L"Times New Roman";
-                overlayInfo4.st_backgroundColor.iColorAlpha = 255;
-                overlayInfo4.st_backgroundColor.iColorR = 11;
-                overlayInfo4.st_backgroundColor.iColorG = 113;
-                overlayInfo4.st_backgroundColor.iColorB = 177;
-
-                overlayInfo4.iFontSize = 32;
-                overlayInfo4.st_fontColor.iColorAlpha = 255;
-                overlayInfo4.st_fontColor.iColorR = 255;
-                overlayInfo4.st_fontColor.iColorG = 255;
-                overlayInfo4.st_fontColor.iColorB = 0;
-
-                overlayInfo4.st_FontPosition.iPosX = 0;
-                overlayInfo4.st_FontPosition.iPosY = -2;
-
-                //std::wstring wstrOverlayInfo4 = Img_string2wstring(szOverlayInfo);
-                //overlayInfo4.szOverlayString = wstrOverlayInfo4.c_str();
-                std::string wstrOverlayInfo4(szOverlayInfo);
-                for (int i = 96; i < strlen(szOverlayInfo);)
-                {
-                    wstrOverlayInfo4.insert(i, "\n");
-                    i = i + 96;
-                }
-                overlayInfo4.szOverlayString = wstrOverlayInfo4.c_str();
-
-                inForArray[3] = overlayInfo4;
-
                 int iRet = -1;
                 uint8_t* pBuf = GetImgBufferAddress();
                 size_t  iBufSize = MAX_IMG_SIZE;
@@ -1145,6 +1014,138 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetImage(int ImageType, char * 
 
                 if (g_pCamera->GetIfOverlay())
                 {
+                    struct tm local;
+                    time_t nowtime;
+                    nowtime = time(NULL); //获取日历时间  
+                    //local = localtime(&nowtime);  //获取当前系统时间
+                    localtime_s(&local, &nowtime);
+
+                    //std::wstring wstrOverlayInfo = Img_string2wstring(Overlay);
+
+                    //叠加车道号信息
+                    char szOverlayInfo[MAX_PATH] = { 0 };
+                    sprintf_s(szOverlayInfo, sizeof(szOverlayInfo), "%s", Result->chSignStationName);
+                    MyRectf rectfOut;
+                    Tool_CalculateStringWithAndHeight(szOverlayInfo, iWidth, iHeight, 32, L"黑体", rectfOut);
+
+                    OverlayInfo inForArray[4];
+
+                    OverlayInfo overlayInfo1;
+                    //overlayInfo1.szFontFamily = L"黑体";
+                    overlayInfo1.szFontFamily = "黑体";
+                    overlayInfo1.st_backgroundColor.iColorAlpha = 55;
+                    overlayInfo1.st_backgroundColor.iColorR = 108;
+                    overlayInfo1.st_backgroundColor.iColorG = 120;
+                    overlayInfo1.st_backgroundColor.iColorB = 132;
+
+                    overlayInfo1.iFontSize = 32;
+                    overlayInfo1.st_fontColor.iColorAlpha = 255;
+                    overlayInfo1.st_fontColor.iColorR = 255;
+                    overlayInfo1.st_fontColor.iColorG = 255;
+                    overlayInfo1.st_fontColor.iColorB = 255;
+
+                    overlayInfo1.st_FontPosition.iPosX = 32;
+                    overlayInfo1.st_FontPosition.iPosY = rectfOut.Height;
+
+                    //std::wstring wstrOverlayInfo = Img_string2wstring(szOverlayInfo);
+                    std::string wstrOverlayInfo(szOverlayInfo);
+                    overlayInfo1.szOverlayString = wstrOverlayInfo.c_str();
+                    overlayInfo1.iStyle = 1;
+
+                    inForArray[0] = overlayInfo1;
+
+
+                    //叠加第一行 时间信息
+                    memset(szOverlayInfo, '\0', sizeof(szOverlayInfo));
+                    sprintf_s(szOverlayInfo, sizeof(szOverlayInfo), "%04d年%02d月%02d日 %02d:%02d:%02d",
+                        local.tm_year + 1900,
+                        local.tm_mon + 1,
+                        local.tm_mday,
+                        local.tm_hour,
+                        local.tm_min,
+                        local.tm_sec);
+                    memset(&rectfOut, 0, sizeof(rectfOut));
+                    //Tool_CalculateStringWithAndHeight(szOverlayInfo, iWidth, iHeight, 32, L"黑体", rectfOut);
+                    Tool_CalculateStringWithAndHeight(szOverlayInfo, DEST_IMG_WIDTH, DEST_IMG_HEIGHT, 32, L"黑体", rectfOut);
+
+                    OverlayInfo overlayInfo2;
+                    overlayInfo2 = overlayInfo1;
+
+                    //overlayInfo2.st_FontPosition.iPosX = iWidth - rectfOut.Width - 32;
+                    overlayInfo2.st_FontPosition.iPosX = DEST_IMG_WIDTH - rectfOut.Width - 32;
+                    overlayInfo2.st_FontPosition.iPosY = rectfOut.Height;
+
+                    //std::wstring wstrOverlayInfo2 = Img_string2wstring(szOverlayInfo);
+                    //overlayInfo2.szOverlayString = wstrOverlayInfo2.c_str();
+                    std::string wstrOverlayInfo2(szOverlayInfo);
+                    overlayInfo2.szOverlayString = wstrOverlayInfo2.c_str();
+                    overlayInfo2.iStyle = 1;
+
+                    inForArray[1] = overlayInfo2;
+
+                    //叠加第二行 抓拍信息
+                    memset(szOverlayInfo, '\0', sizeof(szOverlayInfo));
+                    sprintf_s(szOverlayInfo, sizeof(szOverlayInfo), "%s%s", Result->chPlateColor, Result->chPlateNO);
+                    OverlayInfo overlayInfo3;
+                    overlayInfo3 = overlayInfo1;
+
+                    overlayInfo3.st_FontPosition.iPosX = 32;
+                    //overlayInfo3.st_FontPosition.iPosY = iHeight - 2 * 32;
+                    overlayInfo3.st_FontPosition.iPosY = DEST_IMG_HEIGHT - 2 * 32;
+
+                    //std::wstring wstrOverlayInfo3 = Img_string2wstring(szOverlayInfo);
+                    //overlayInfo3.szOverlayString = wstrOverlayInfo3.c_str();
+                    std::string wstrOverlayInfo3(szOverlayInfo);
+                    overlayInfo3.szOverlayString = wstrOverlayInfo3.c_str();
+                    overlayInfo3.iStyle = 1;
+
+                    inForArray[2] = overlayInfo3;
+
+                    //叠加第三行 收费信息
+                    memset(szOverlayInfo, '\0', sizeof(szOverlayInfo));
+                    szOverlayInfo[0] = '\n';
+                    size_t iLength = strlen(Overlay);
+                    if (iLength < sizeof(szOverlayInfo))
+                    {
+                        memcpy(szOverlayInfo + 1, Overlay, iLength);
+                        iLength = iLength > 0 ? iLength : 0;
+                        szOverlayInfo[iLength + 1] = '\0';
+                    }
+                    else
+                    {
+                        memcpy(szOverlayInfo + 1, Overlay, sizeof(szOverlayInfo));
+                        szOverlayInfo[sizeof(szOverlayInfo)-1] = '\0';
+                    }
+
+                    OverlayInfo overlayInfo4;
+                    //overlayInfo4.szFontFamily = L"Times New Roman";
+                    overlayInfo4.szFontFamily = "Times New Roman";
+                    overlayInfo4.st_backgroundColor.iColorAlpha = 255;
+                    overlayInfo4.st_backgroundColor.iColorR = 11;
+                    overlayInfo4.st_backgroundColor.iColorG = 113;
+                    overlayInfo4.st_backgroundColor.iColorB = 177;
+
+                    overlayInfo4.iFontSize = 32;
+                    overlayInfo4.st_fontColor.iColorAlpha = 255;
+                    overlayInfo4.st_fontColor.iColorR = 255;
+                    overlayInfo4.st_fontColor.iColorG = 255;
+                    overlayInfo4.st_fontColor.iColorB = 0;
+
+                    overlayInfo4.st_FontPosition.iPosX = 0;
+                    overlayInfo4.st_FontPosition.iPosY = -2;
+
+                    //std::wstring wstrOverlayInfo4 = Img_string2wstring(szOverlayInfo);
+                    //overlayInfo4.szOverlayString = wstrOverlayInfo4.c_str();
+                    std::string wstrOverlayInfo4(szOverlayInfo);
+                    for (int i = 96; i < strlen(szOverlayInfo);)
+                    {
+                        wstrOverlayInfo4.insert(i, "\n");
+                        i = i + 96;
+                    }
+                    overlayInfo4.szOverlayString = wstrOverlayInfo4.c_str();
+
+                    inForArray[3] = overlayInfo4;
+
                     g_WriteLog("begin to overlay.");
                     //iRet = DrawStringToImgEx(dataStruct, inForArray, 4, pBuf, iBufSize);
                     iRet = DrawStringToImgEx_cximage(dataStruct, inForArray, 4, pBuf, iBufSize);
@@ -1390,6 +1391,108 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_CloseVideo(HWND hHandle)
     return  (bRet) ? TRUE : FALSE;
 }
 
+//PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_Screenshot(char * ImageInfo)
+//{
+//    char chLog[256] = { 0 };
+//    sprintf_s(chLog, sizeof(chLog), "Plate_Screenshot, begin, ImageInfo= %s", ImageInfo);
+//    g_WriteLog(chLog);
+//
+//    //EnterCriticalSection(&g_csDLL);
+//
+//    bool bRet = FALSE;
+//    if (CheckCamerIsValid())
+//    {
+//        int iBufferSize = g_pCamera->GetIfCompress() ? COMPRESS_IMG_SIZE : MAX_IMG_SIZE;
+//        uint8_t* pBuffer = GetImgBufferAddress();
+//        bRet = g_pCamera->GetOneImgFromVideo(g_pCamera->GetIfCompress(), pBuffer, &iBufferSize);
+//        if (!bRet)
+//        {
+//            g_WriteLog("GetOneImgFromVideo failed.");
+//        }
+//        else
+//        {
+//            memset(chLog, 0, sizeof(chLog));
+//            sprintf_s(chLog, sizeof(chLog), "GetOneImgFromVideo, succeed, image length = %d", iBufferSize);
+//            g_WriteLog(chLog);
+//            if (g_overlayText.length() > 0
+//                && g_pCamera->GetIfOverlay())
+//            {
+//                //ImgDataStruct dataStruct;
+//                //dataStruct.srcImgData = pBuffer;
+//                //dataStruct.srcImgDataLengh = iBufferSize;
+//                //OverlayInfo oInfo;
+//                //oInfo.iColorR = 255;
+//                //oInfo.iColorG = 255;
+//                //oInfo.iColorB = 255;
+//                //oInfo.iFontSize = 32;
+//                //oInfo.szOverlayString = g_overlayText.c_str();
+//                //uint8_t* pDestBuffer = new uint8_t[MAX_IMG_SIZE];
+//                //size_t iDestBufSize = MAX_IMG_SIZE;
+//                //int iRet = DrawStringToImg(dataStruct, oInfo, pDestBuffer, iDestBufSize);
+//                uint8_t* pDestBuffer = GetImgBufferAddress3();
+//                size_t iDestBufSize = MAX_IMG_SIZE;
+//                int iRet = DrawEnd2String(pBuffer, iBufferSize, pDestBuffer, iDestBufSize, g_strOverlayInfo.c_str(), 0, -2);
+//                if (iRet == 0)
+//                {
+//                    g_WriteLog("DrawStringToImg success.");
+//                    uint8_t* pJPGBuffer = GetImgBufferAddress();
+//                    size_t iJpgBufSize = MAX_IMG_SIZE;
+//
+//                    if (Tool_Img_compress(pDestBuffer, iDestBufSize, pJPGBuffer, &iJpgBufSize, 1600, 1200, COMPRESS_IMG_SIZE))
+//                    {
+//                        g_WriteLog("compress image success.");
+//                        bRet = Tool_SaveFileToDisk(ImageInfo, pJPGBuffer, iJpgBufSize);
+//                        pJPGBuffer = NULL;
+//                    }
+//                    else
+//                    {
+//                        memset(chLog, 0, sizeof(chLog));
+//                        sprintf_s(chLog, sizeof(chLog), "DrawStringToImg failed, error code= %d ,need buffer size = %ld, use default.", iRet, iDestBufSize);
+//                        g_WriteLog(chLog);
+//                        bRet = Tool_SaveFileToDisk(ImageInfo, pBuffer, iBufferSize);
+//                    }
+//                }
+//                else
+//                {
+//                    g_WriteLog("DrawStringToImg failed, use default.");
+//                    bRet = Tool_SaveFileToDisk(ImageInfo, pBuffer, iBufferSize);
+//                }
+//                pDestBuffer = NULL;
+//                //dataStruct.srcImgData = NULL;
+//                //oInfo.szOverlayString = NULL;
+//
+//                //if (pDestBuffer)
+//                //{
+//                //    delete[] pDestBuffer;
+//                //    pDestBuffer = NULL;
+//                //}
+//            }
+//            else
+//            {
+//                if (g_pCamera->GetIfOverlay())
+//                {
+//                    g_WriteLog("Overlay info is less than 0,  use orig image.");
+//                }
+//                g_WriteLog("save origin image.");
+//                bRet = Tool_SaveFileToDisk(ImageInfo, pBuffer, iBufferSize);
+//            }
+//            
+//            if (!bRet)
+//            {
+//                g_WriteLog("Tool_SaveFileToDisk failed.");
+//            }
+//        }
+//        pBuffer = NULL;
+//    }
+//
+//    //LeaveCriticalSection(&g_csDLL);
+//
+//    memset(chLog, 0, sizeof(chLog));
+//    sprintf_s(chLog, sizeof(chLog), "Plate_Screenshot, end");
+//    g_WriteLog(chLog);
+//    return  (bRet) ? TRUE : FALSE;
+//}
+
 PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_Screenshot(char * ImageInfo)
 {
     char chLog[256] = { 0 };
@@ -1397,7 +1500,6 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_Screenshot(char * ImageInfo)
     g_WriteLog(chLog);
 
     //EnterCriticalSection(&g_csDLL);
-
     bool bRet = FALSE;
     if (CheckCamerIsValid())
     {
@@ -1413,58 +1515,56 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_Screenshot(char * ImageInfo)
             memset(chLog, 0, sizeof(chLog));
             sprintf_s(chLog, sizeof(chLog), "GetOneImgFromVideo, succeed, image length = %d", iBufferSize);
             g_WriteLog(chLog);
-            if (g_overlayText.length() > 0
+            if (g_strOverlayInfo.length() > 0
                 && g_pCamera->GetIfOverlay())
             {
-                //ImgDataStruct dataStruct;
-                //dataStruct.srcImgData = pBuffer;
-                //dataStruct.srcImgDataLengh = iBufferSize;
-                //OverlayInfo oInfo;
-                //oInfo.iColorR = 255;
-                //oInfo.iColorG = 255;
-                //oInfo.iColorB = 255;
-                //oInfo.iFontSize = 32;
-                //oInfo.szOverlayString = g_overlayText.c_str();
-                //uint8_t* pDestBuffer = new uint8_t[MAX_IMG_SIZE];
-                //size_t iDestBufSize = MAX_IMG_SIZE;
-                //int iRet = DrawStringToImg(dataStruct, oInfo, pDestBuffer, iDestBufSize);
-                uint8_t* pDestBuffer = GetImgBufferAddress3();
-                size_t iDestBufSize = MAX_IMG_SIZE;
-                int iRet = DrawEnd2String(pBuffer, iBufferSize, pDestBuffer, iDestBufSize, g_strOverlayInfo.c_str(), 0, -2);
+                OverlayInfo overlayInfo;
+                overlayInfo.szFontFamily = "Times New Roman";
+                overlayInfo.st_backgroundColor.iColorAlpha = 255;
+                overlayInfo.st_backgroundColor.iColorR = 11;
+                overlayInfo.st_backgroundColor.iColorG = 113;
+                overlayInfo.st_backgroundColor.iColorB = 177;
+
+                overlayInfo.iFontSize = 32;
+                overlayInfo.st_fontColor.iColorAlpha = 255;
+                overlayInfo.st_fontColor.iColorR = 255;
+                overlayInfo.st_fontColor.iColorG = 255;
+                overlayInfo.st_fontColor.iColorB = 0;
+
+                overlayInfo.st_FontPosition.iPosX = 0;
+                overlayInfo.st_FontPosition.iPosY = -2;
+
+                std::string wstrOverlayInfo4(g_strOverlayInfo);
+                for (int i = 96; i < strlen(g_strOverlayInfo.c_str());)
+                {
+                    wstrOverlayInfo4.insert(i, "\n");
+                    i = i + 96;
+                }
+                overlayInfo.szOverlayString = wstrOverlayInfo4.c_str();
+
+                ImgDataStruct dataStruct;
+                dataStruct.srcImgData = (unsigned char*)pBuffer;
+                dataStruct.srcImgDataLengh = iBufferSize;
+
+                g_WriteLog("begin to overlay.");
+
+                uint8_t* pBuf = GetImgBufferAddress2();
+                size_t  iBufSize = MAX_IMG_SIZE;
+
+                int iRet = DrawStringToImgEx_cximage(dataStruct, &overlayInfo, 1, pBuf, iBufSize);
+                memset(chLog, '\0', sizeof(chLog));
+                sprintf_s(chLog, sizeof(chLog), "overlay finish, process code = %d.", iRet);
+                g_WriteLog(chLog);
+
                 if (iRet == 0)
                 {
-                    g_WriteLog("DrawStringToImg success.");
-                    uint8_t* pJPGBuffer = GetImgBufferAddress();
-                    size_t iJpgBufSize = MAX_IMG_SIZE;
-
-                    if (Tool_Img_compress(pDestBuffer, iDestBufSize, pJPGBuffer, &iJpgBufSize, 1600, 1200, COMPRESS_IMG_SIZE))
-                    {
-                        g_WriteLog("compress image success.");
-                        bRet = Tool_SaveFileToDisk(ImageInfo, pJPGBuffer, iJpgBufSize);
-                        pJPGBuffer = NULL;
-                    }
-                    else
-                    {
-                        memset(chLog, 0, sizeof(chLog));
-                        sprintf_s(chLog, sizeof(chLog), "DrawStringToImg failed, error code= %d ,need buffer size = %ld, use default.", iRet, iDestBufSize);
-                        g_WriteLog(chLog);
-                        bRet = Tool_SaveFileToDisk(ImageInfo, pBuffer, iBufferSize);
-                    }
+                    bRet = Tool_SaveFileToDisk(ImageInfo, pBuf, iBufSize);
                 }
                 else
                 {
-                    g_WriteLog("DrawStringToImg failed, use default.");
-                    bRet = Tool_SaveFileToDisk(ImageInfo, pBuffer, iBufferSize);
+                    bRet = Tool_SaveFileToDisk(ImageInfo, pBuf, iBufferSize);
                 }
-                pDestBuffer = NULL;
-                //dataStruct.srcImgData = NULL;
-                //oInfo.szOverlayString = NULL;
-
-                //if (pDestBuffer)
-                //{
-                //    delete[] pDestBuffer;
-                //    pDestBuffer = NULL;
-                //}
+                g_WriteLog("save image finish.");
             }
             else
             {
@@ -1475,7 +1575,7 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_Screenshot(char * ImageInfo)
                 g_WriteLog("save origin image.");
                 bRet = Tool_SaveFileToDisk(ImageInfo, pBuffer, iBufferSize);
             }
-            
+
             if (!bRet)
             {
                 g_WriteLog("Tool_SaveFileToDisk failed.");
