@@ -90,6 +90,8 @@ BEGIN_MESSAGE_MAP(Ctest_PLATERECOGNIZEDlg, CDialogEx)
     ON_BN_CLICKED(IDC_BUTTON_CloseTime, &Ctest_PLATERECOGNIZEDlg::OnBnClickedButtonClosetime)
     ON_BN_CLICKED(IDC_BUTTON_GetDeviceInfo, &Ctest_PLATERECOGNIZEDlg::OnBnClickedButtonGetdeviceinfo)
     ON_BN_CLICKED(IDC_BUTTON_USEmsg, &Ctest_PLATERECOGNIZEDlg::OnBnClickedButtonUsemsg)
+    ON_BN_CLICKED(IDC_BUTTON_Plate_StartRecord, &Ctest_PLATERECOGNIZEDlg::OnBnClickedButtonPlateStartrecord)
+    ON_BN_CLICKED(IDC_BUTTON_StopRecord, &Ctest_PLATERECOGNIZEDlg::OnBnClickedButtonStoprecord)
 END_MESSAGE_MAP()
 
 
@@ -512,6 +514,20 @@ void Ctest_PLATERECOGNIZEDlg::ShowMessage(CString strMsg)
 }
 
 
+bool Ctest_PLATERECOGNIZEDlg::GetItemText(int ItemID, char* buffer, size_t bufSize)
+{
+    CString strTemp;
+    GetDlgItem(ItemID)->GetWindowText(strTemp);
+    if (strTemp.GetLength() < bufSize)
+    {
+        //sprintf(buffer, "%s", strTemp.GetBuffer());
+        sprintf_s(buffer, bufSize, "%s", strTemp.GetBuffer());
+        strTemp.ReleaseBuffer();
+        return true;
+    }
+    return false;
+}
+
 void Ctest_PLATERECOGNIZEDlg::OnBnClickedButtonUsemsg()
 {
     // TODO:  在此添加控件通知处理程序代码
@@ -527,4 +543,43 @@ void Ctest_PLATERECOGNIZEDlg::OnBnClickedButtonUsemsg()
         m_bUseMessageModel = false;
         GetDlgItem(IDC_BUTTON_USEmsg)->SetWindowTextA("启用消息模式");
     }
+}
+
+
+void Ctest_PLATERECOGNIZEDlg::OnBnClickedButtonPlateStartrecord()
+{
+    // TODO:  在此添加控件通知处理程序代码
+    char chTemp[256] = {0};
+    GetItemText(IDC_EDIT_durationTime, chTemp, sizeof(chTemp));
+    int iDurationTimes = atoi(chTemp);
+
+    memset(chTemp, '\0', sizeof(chTemp));
+    GetItemText(IDC_EDIT_durationTime, chTemp, sizeof(chTemp));
+    int ipreTimes = atoi(chTemp);
+
+    char chCurrentDir[MAX_PATH];
+    GetModuleFileNameA(NULL, chCurrentDir, MAX_PATH - 1);
+    PathRemoveFileSpecA(chCurrentDir);
+
+    char chAviFileName[256] = { 0 };
+    sprintf_s(chAviFileName, sizeof(chAviFileName), "%s\\%lu.avi", chCurrentDir, GetTickCount());
+    BOOL bRet = Plate_StartRecord(0, chAviFileName, iDurationTimes, ipreTimes);
+
+    char chLog[256] = { 0 };
+    sprintf_s(chLog, sizeof(chLog), "Plate_StartRecord, chAviFileName= %s, iDurationTimes = %d , ipreTimes = %d return code = %d", chAviFileName, iDurationTimes, ipreTimes, bRet);
+    //MessageBox(chLog);
+    ShowMessage(chLog);
+}
+
+
+void Ctest_PLATERECOGNIZEDlg::OnBnClickedButtonStoprecord()
+{
+    // TODO:  在此添加控件通知处理程序代码
+
+    BOOL bRet = Plate_StopRecord(0);
+
+    char chLog[256] = { 0 };
+    sprintf_s(chLog, sizeof(chLog), "Plate_StopRecord,return code = %d",  bRet);
+    //MessageBox(chLog);
+    ShowMessage(chLog);
 }

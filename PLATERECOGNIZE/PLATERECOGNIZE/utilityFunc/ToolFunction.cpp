@@ -2,6 +2,7 @@
 #include "ToolFunction.h"
 #include<shellapi.h>
 //#include <afx.h>
+#include <direct.h>
 
 #include <gdiplus.h>
 using namespace Gdiplus;
@@ -14,15 +15,16 @@ using namespace Gdiplus;
 
 #include "./libCxImage/ximage.h"
 #pragma  comment(lib, "./libCxImage/cximage.lib")
-#define SAFE_DELETE_OBJ(obj) \
-{   \
-    if (obj != NULL)    \
-    {   \
-        delete obj; \
-        obj = NULL; \
-    }   \
-}
+//#define SAFE_DELETE_OBJ(obj) \
+//{   \
+//    if (obj != NULL)    \
+//    {   \
+//        delete obj; \
+//        obj = NULL; \
+//    }   \
+//}
 
+char g_chDllPath[256] = { 0 };
 
 TiXmlElement SelectElementByName(const char* InputInfo, char* pName, int iXMLType)
 {
@@ -138,6 +140,20 @@ void g_WriteKeyValueFromConfigFile(const char* INIFileName, const char* nodeName
 	WritePrivateProfileStringA(nodeName, keyName, keyValue, iniFileName);
 }
 
+void Tool_ReadIntValueFromConfigFile(const char* IniFileName, const char* nodeName, const char* keyName, int&keyValue)
+{
+    char iniFileName[MAX_PATH] = { 0 };
+    sprintf_s(iniFileName, sizeof(iniFileName), "%s\\%s", Tool_GetCurrentPath(), IniFileName);
+    //sprintf_s(iniFileName, sizeof(iniFileName), "%s\\%s", Tool_GetDllDirPath(), IniFileName);
+
+    int iValue = GetPrivateProfileIntA(nodeName, keyName, keyValue, iniFileName);
+    keyValue = iValue;
+
+    char chTemp[128] = { 0 };
+    sprintf_s(chTemp, sizeof(chTemp), "%d", iValue);
+    WritePrivateProfileStringA(nodeName, keyName, chTemp, iniFileName);
+}
+
 int g_checkIP(const char* p)
 {
 	int n[4];
@@ -208,6 +224,22 @@ bool Tool_MakeDir(const char* chImgPath)
         //WriteLog("Create Dir failed.");
         return false;
     }
+}
+
+const char* Tool_GetCurrentPath()
+{
+    //static TCHAR szPath[256] = { 0 };
+    //if (strlen(szPath) <= 0)
+    //    static wchar_t szPath[256] = { 0 };
+    //    if (wcslen(szPath) <= 0)
+    //    {
+    //        GetModuleFileName(NULL, szPath, MAX_PATH - 1);
+    //        PathRemoveFileSpec(szPath);
+    //    }
+    static CHAR szPath[256] = { 0 };
+    //getcwd(szPath,sizeof(szPath));
+    _getcwd(szPath, sizeof(szPath));
+    return szPath;
 }
 
 long Tool_GetFileSize(const char *FileName)
@@ -2077,3 +2109,57 @@ bool Tool_CalculateStringWithAndHeight(const char* overlayString, const int imag
     rectfOut.Height = TempRectf.Height;
     return true;
 }
+
+
+void Tool_SetDllDirPath(const char* dirPath)
+{
+    if (dirPath != NULL
+        && strlen(dirPath) < sizeof(g_chDllPath))
+    {
+        memset(g_chDllPath, '\0', sizeof(g_chDllPath));
+        memcpy(g_chDllPath, dirPath, strlen(dirPath));
+    }
+}
+
+const char* Tool_GetDllDirPath()
+{
+    if (strlen(g_chDllPath) > 0)
+    {
+        return g_chDllPath;
+    }
+    return NULL;
+}
+
+int Tool_SafeCloseThread(HANDLE& threadHandle)
+{
+    if (threadHandle == NULL)
+    {
+        return -1;
+    }
+    MSG msg;
+    DWORD dwRet = -1;
+    while (NULL != threadHandle && WAIT_OBJECT_0 != dwRet) // INFINITE
+    {
+        dwRet = MsgWaitForMultipleObjects(1, &threadHandle, FALSE, 100, QS_ALLINPUT);
+        if (dwRet == WAIT_OBJECT_0 + 1)
+        {
+            if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+            {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
+        }
+    }
+    CloseHandle(threadHandle);
+    threadHandle = NULL;
+    return 0;
+}
+
+#ifdef USE_MSVC
+SYSTEMTIME Tool_GetCurrentTime()
+{
+    SYSTEMTIME systime;
+    GetLocalTime(&systime);//本地时间
+    return systime;
+}
+#endif

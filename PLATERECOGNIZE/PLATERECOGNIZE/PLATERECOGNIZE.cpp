@@ -13,14 +13,14 @@ extern void g_ReadKeyValueFromConfigFile(const char* nodeName, const char* keyNa
 extern char* GetDllPath();
 
 #pragma data_seg("Shared")  
-std::shared_ptr<Camera6467_plate> g_pCamera;
-std::shared_ptr<uint8_t> g_pImgData;
-std::shared_ptr<uint8_t> g_pImgData2;
-std::shared_ptr<uint8_t> g_pImgData3;
-std::shared_ptr<CameraResult> g_pLastResult;
-std::string g_strLastpicID;
-std::string g_strOverlayInfo;
-std::wstring g_overlayText;
+std::shared_ptr<Camera6467_plate> g_pCamera = nullptr;
+std::shared_ptr<uint8_t> g_pImgData = nullptr;
+std::shared_ptr<uint8_t> g_pImgData2 = nullptr;
+std::shared_ptr<uint8_t> g_pImgData3 = nullptr;
+std::shared_ptr<CameraResult> g_pLastResult = nullptr;
+std::string g_strLastpicID = std::string("");
+std::string g_strOverlayInfo = std::string("");
+std::wstring g_overlayText = std::wstring(L"");
 #pragma data_seg()
 
 #pragma comment(linker,"/section:Shared,rws")
@@ -165,6 +165,7 @@ PLATERECOGNIZE_API BOOL WINAPI Plate_InitDevice(HWND hHandle, int Msg, int PorTy
         if (0 == g_pCamera->ConnectToCamera())
         {
             g_WriteLog("connect to camera success.");
+            g_pCamera->SetH264Callback(0, 0, 0, 0xffff0700);
         }
         else
         {
@@ -1784,6 +1785,52 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_GetDeviceInfo(char * PlateInfo)
 
     memset(chLog, 0, sizeof(chLog));
     sprintf_s(chLog, sizeof(chLog), "Plate_GetDeviceInfo, end, PlateInfo = %s.", PlateInfo);
+    g_WriteLog(chLog);
+    return  (bRet) ? TRUE : FALSE;
+}
+
+PLATERECOGNIZE_API BOOL CALLING_CONVENTION Plate_StartRecord(HWND hHandle, char* filename, int durationTimes, int preTimes)
+{
+    char chLog[256] = { 0 };
+    sprintf_s(chLog, sizeof(chLog), "%s, begin, hHandle = %p, filename = %s, durationTimes = %d, preTimes = %d",
+        __FUNCTION__,
+        hHandle,
+        filename,
+        durationTimes,
+        preTimes);
+    g_WriteLog(chLog);
+    bool bRet = false;
+
+    if (CheckCamerIsValid())
+    {
+        g_pCamera->StartToSaveAviFile(0, filename, preTimes *1000);
+        if (durationTimes > 0)
+        {
+            Sleep(500);
+            g_pCamera->StopSaveAviFile(0, GetTickCount() + durationTimes * 1000);
+        }
+    }
+
+    memset(chLog, 0, sizeof(chLog));
+    sprintf_s(chLog, sizeof(chLog), "%s, end, return code = %d.", __FUNCTION__, bRet);
+    g_WriteLog(chLog);
+    return  (bRet) ? TRUE : FALSE;
+}
+
+PLATERECOGNIZE_API BOOL CALLING_CONVENTION  Plate_StopRecord(HWND hHandle)
+{
+    char chLog[256] = { 0 };
+    sprintf_s(chLog, sizeof(chLog), "%s, begin, hHandle = %p",  __FUNCTION__, hHandle);
+    g_WriteLog(chLog);
+    bool bRet = false;
+
+    if (CheckCamerIsValid())
+    {
+        g_pCamera->StopSaveAviFile(0, GetTickCount());
+    }
+
+    memset(chLog, 0, sizeof(chLog));
+    sprintf_s(chLog, sizeof(chLog), "%s, end, return code = %d.", __FUNCTION__, bRet);
     g_WriteLog(chLog);
     return  (bRet) ? TRUE : FALSE;
 }

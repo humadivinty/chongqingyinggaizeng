@@ -8,6 +8,9 @@
 using namespace Gdiplus;
 #pragma  comment(lib, "gdiplus.lib")
 
+#include "libAVI/cAviLib.h"
+#include "libAVI/MyH264Saver.h"
+
 #define CMD_DEL_VEH_HEAD 1
 #define CMD_GET_VEH_LENGTH 2
 #define  CMD_DEL_ALL_VEH 3
@@ -124,7 +127,8 @@ public:
     void	InterruptionConnection();
 
     virtual void ReadConfig();
-    bool WriteLog(const char* chlog);
+    bool WriteLog(const char* chlog); 
+    void WriteFormatLog(const char* szfmt, ...);
     bool TakeCapture();
     bool SynTime();
     bool SynTime(int Year, int Month, int Day, int Hour, int Minute, int Second, int MilientSecond);
@@ -155,6 +159,19 @@ public:
     //获取设备的硬件版本信息
     bool GetHardWareInfo(BasicInfo& info);
 
+    //视频保存
+    bool SetH264Callback(int iStreamID, DWORD64 dwBeginTime, DWORD64 dwEndTime, DWORD RecvFlag);
+    bool SetH264CallbackNULL(int iStreamID, DWORD RecvFlag);
+
+    bool StartToSaveAviFile(int iStreamID, const char* fileName, DWORD64 beginTimeTick = 0);
+    bool StopSaveAviFile(int iStreamID, INT64 TimeFlag = 0);
+
+    void setVideoAdvanceTime(int iTime);
+    int getVideoAdvanceTime();
+
+    void setVideoDelayTime(int iTime);
+    int getVideoDelayTime();
+
 protected:
     void* m_hHvHandle;
     //void* m_hWnd;
@@ -167,6 +184,11 @@ protected:
     int m_iCompressQuality;
     int m_iDirection;
     int m_iIndex;
+
+    int m_iVideoIndex;
+    int m_iVideoAdvanceTime;
+    int m_iVideoDelayTime;
+    DWORD64 m_curH264Ms;
 
     bool m_bLogEnable;
     bool m_bSynTime;
@@ -187,6 +209,7 @@ protected:
     CRITICAL_SECTION m_csLog;
 
     HANDLE m_hStatusCheckThread;			//状态检测线程
+    MyH264Saver m_h264Saver;
 
     void ReadHistoryInfo();
     void WriteHistoryInfo(SaveModeInfo& SaveInfo);
@@ -345,6 +368,44 @@ public:
         DWORD dwImageDataLen,
         DWORD dwImageType,
         LPCSTR szImageExtInfo) = 0;
+
+    static INT HVAPI_CALLBACK_H264_EX(
+        PVOID pUserData,
+        DWORD dwVedioFlag,
+        DWORD dwVideoType,
+        DWORD dwWidth,
+        DWORD dwHeight,
+        DWORD64 dw64TimeMS,
+        PBYTE pbVideoData,
+        DWORD dwVideoDataLen,
+        LPCSTR szVideoExtInfo
+        )
+    {
+        if (pUserData == NULL)
+            return 0;
+
+        BaseCamera* pThis = (BaseCamera*)pUserData;
+        return pThis->handleH264Frame(
+            dwVedioFlag,
+            dwVideoType,
+            dwWidth,
+            dwHeight,
+            dw64TimeMS,
+            pbVideoData,
+            dwVideoDataLen,
+            szVideoExtInfo);
+    };
+
+    int handleH264Frame(
+        DWORD dwVedioFlag,
+        DWORD dwVideoType,
+        DWORD dwWidth,
+        DWORD dwHeight,
+        DWORD64 dw64TimeMS,
+        PBYTE pbVideoData,
+        DWORD dwVideoDataLen,
+        LPCSTR szVideoExtInfo
+        );
 
     virtual void ThreadFunc_CheckStatus() = 0;
 };

@@ -25,6 +25,9 @@
     <Filter Include="coredump">
       <UniqueIdentifier>{b885f7ae-6843-4980-aabf-ba37d91d2471}</UniqueIdentifier>
     </Filter>
+    <Filter Include="libAVI">
+      <UniqueIdentifier>{a761349d-cca1-46a5-af98-0af0576c3396}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -59,6 +62,18 @@
     </ClInclude>
     <ClInclude Include="coredump\MiniDumper.h">
       <Filter>coredump</Filter>
+    </ClInclude>
+    <ClInclude Include="libAVI\avilib.h">
+      <Filter>libAVI</Filter>
+    </ClInclude>
+    <ClInclude Include="libAVI\cAviLib.h">
+      <Filter>libAVI</Filter>
+    </ClInclude>
+    <ClInclude Include="libAVI\CusH264Struct.h">
+      <Filter>libAVI</Filter>
+    </ClInclude>
+    <ClInclude Include="libAVI\MyH264Saver.h">
+      <Filter>libAVI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -97,6 +112,18 @@
     </ClCompile>
     <ClCompile Include="coredump\MiniDumper.cpp">
       <Filter>coredump</Filter>
+    </ClCompile>
+    <ClCompile Include="libAVI\avilib.c">
+      <Filter>libAVI</Filter>
+    </ClCompile>
+    <ClCompile Include="libAVI\cAviLib.cpp">
+      <Filter>libAVI</Filter>
+    </ClCompile>
+    <ClCompile Include="libAVI\CusH264Struct.cpp">
+      <Filter>libAVI</Filter>
+    </ClCompile>
+    <ClCompile Include="libAVI\MyH264Saver.cpp">
+      <Filter>libAVI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

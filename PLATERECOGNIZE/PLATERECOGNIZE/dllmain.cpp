@@ -40,6 +40,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         GetModuleFileName(hModule, szFileName, MAX_PATH);	//取得包括程序名的全路径
         PathRemoveFileSpec(szFileName);				//去掉程序名
         SetDllPath(szFileName);
+        Tool_SetDllDirPath(szFileName);
 
         InitializeCriticalSection(&g_csDLL);
         break;

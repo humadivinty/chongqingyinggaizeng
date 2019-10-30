@@ -5,6 +5,22 @@
 
 //#define MY_SPRINTF sprintf_s
 
+#define  USE_MSVC
+
+#define SAFE_DELETE_OBJ(obj) \
+if (NULL != obj)                                  \
+{                                           \
+    delete obj;                        \
+    obj = NULL;                      \
+}
+
+#define SAFE_DELETE_ARRAY(arrayObj) \
+if (NULL != arrayObj)                                  \
+{                                           \
+    delete[] arrayObj;                        \
+    arrayObj = NULL;                      \
+}
+
 typedef struct _ImgDataStruct{
     UCHAR* srcImgData;
     long srcImgDataLengh;
@@ -106,12 +122,15 @@ void Tool_ReadKeyValueFromConfigFile(const char* FileName, const char* nodeName,
 
 void g_WriteKeyValueFromConfigFile(const char* FileName, const char* nodeName, const char* keyName, char* keyValue, int bufferSize);
 
+void Tool_ReadIntValueFromConfigFile(const char* IniFileName, const char* nodeName, const char* keyName, int&keyValue);
 //检查IP的有效性
 int g_checkIP(const char* p);
 
 bool Tool_IsFileExist(const char* FilePath);
 
 bool Tool_MakeDir(const char* chImgPath);
+
+const char* Tool_GetCurrentPath();
 
 long Tool_GetFileSize(const char *FileName);
 
@@ -238,6 +257,19 @@ int DrawEnd1String(void* srcImgData, size_t srcLength, void* destImgData, size_t
 //************************************
 int DrawEnd2String(void* srcImgData, size_t srcLength, void* destImgData, size_t& destLength, const char* overlayString, int posX, int posY);
 
-bool Tool_CalculateStringWithAndHeight(const char* overlayString, const int imageWidth, const int imageHeight,
-    const int fontSize, const WCHAR* szFontFamily,
+bool Tool_CalculateStringWithAndHeight(const char* overlayString, 
+    const int imageWidth, 
+    const int imageHeight,
+    const int fontSize, 
+    const WCHAR* szFontFamily,
     MyRectf& rectfOut);
+
+void Tool_SetDllDirPath(const char* dirPath);
+
+const char* Tool_GetDllDirPath();
+
+int Tool_SafeCloseThread(HANDLE& threadHandle);
+
+#ifdef USE_MSVC
+SYSTEMTIME Tool_GetCurrentTime();
+#endif

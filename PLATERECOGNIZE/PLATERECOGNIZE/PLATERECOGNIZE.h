@@ -245,3 +245,28 @@ PLATERECOGNIZE_API BOOL CALLING_CONVENTION  Plate_CloseTime();
 //                                    表示为海康威视的型号为HKWS - 1 - ds的车牌识别，其固件版本号为2.0.1，动态库版本号为3.2.1.1
 //************************************
 PLATERECOGNIZE_API BOOL CALLING_CONVENTION  Plate_GetDeviceInfo(char * PlateInfo);
+
+//************************************
+// Method:        Plate_StartRecord
+// Describe:        保存视频录像
+// FullName:      Plate_StartRecord
+// Access:          public 
+// Returns:        BOOL
+// Returns Describe:                             TRUE为获取成功，FALSE为获取失败；
+// Parameter:    HWND hHandle  ;        要显示视频的控件句柄
+// Parameter:    char * filename    ;       录像文件名，带路径
+// Parameter:    int durationTimes;        录制持续时间 单位：秒  如果为0则由stopRecord接口停止录制，否则在设定时间流逝结束时自动停止
+// Parameter:    int preTimes        ;        由前n秒开始录制
+//************************************
+PLATERECOGNIZE_API BOOL CALLING_CONVENTION  Plate_StartRecord(HWND  hHandle, char* filename, int durationTimes, int preTimes);
+
+//************************************
+// Method:        Plate_StopRecord
+// Describe:        停止视频录像
+// FullName:      Plate_StopRecord
+// Access:          public 
+// Returns:        BOOL
+// Returns Describe:    TRUE为获取成功，FALSE为获取失败
+// Parameter:    HWND hHandle   要关闭视频的控件的句柄
+//************************************
+PLATERECOGNIZE_API BOOL CALLING_CONVENTION  Plate_StopRecord(HWND  hHandle);

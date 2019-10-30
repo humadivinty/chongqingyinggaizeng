@@ -62,7 +62,12 @@ public:
     void ShowMsg(CEdit *pEdit, CString strMsg);
     void ShowMessage(CString strMsg);
 
+    bool GetItemText(int ItemID, char* buffer, size_t bufSize);
+
     afx_msg void OnBnClickedButtonUsemsg();
 private:
     bool m_bUseMessageModel;
+public:
+    afx_msg void OnBnClickedButtonPlateStartrecord();
+    afx_msg void OnBnClickedButtonStoprecord();
 };
